@@ -1,0 +1,47 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>brunesto</groupId>
+	<artifactId>PC_Avancee</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+	<build>
+		<plugins>
+			<!-- java source and class version -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>11</source>
+					<target>11</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	<dependencies>
+
+		<dependency>
+			<groupId>com.rinkai</groupId>
+			<artifactId>rinkaiopt</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+
+
+		<!-- https://mvnrepository.com/artifact/org.choco-solver/choco-solver -->
+<dependency>
+    <groupId>org.choco-solver</groupId>
+    <artifactId>choco-solver</artifactId>
+    <!-- version>4.10.7-SNAPSHOT</version-->
+    <version>4.10.0</version>
+</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.7</version>
+		</dependency>
+
+
+	</dependencies>
+</project>
