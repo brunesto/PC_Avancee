@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package vrp_3;
+package chap2_vrp;
 
 import java.util.Date;
 import org.chocosolver.solver.Model;
@@ -13,11 +13,9 @@ import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin;
 import org.chocosolver.solver.search.strategy.selectors.variables.DomOverWDeg;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.SetVar;
-import org.chocosolver.solver.variables.Task;
 import org.chocosolver.util.ESat;
 
-
-public class Choco_VRP_Symetric_variable_liee_Branch_Y_Cumul_Channeling_Vrp_3 {
+public class Choco_VRP_Symetric_variable_liee_Vrp_3 {
 
        public static void main(String[] args) {
          
@@ -29,8 +27,6 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Cumul_Channeling_Vrp_3 {
         
         
         // le sommet 0 est le dépot
-        // Astuce : pour chaque véhicule, on créé 2 dépots : le dépot de départ et le dépot d'arrivée
-        //          Et on supprime le noeud 0
         int nb_total_visite=N+V*2;
         
         
@@ -113,30 +109,28 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Cumul_Channeling_Vrp_3 {
         
         
         // contraintes 1 et 2 : définition de s
-      
-        s[0] = mon_modele.intVar("s_0", 0);     // le noeud 0 ne compte pas
+        s[0] = mon_modele.intVar("succ_0", -1);     // le noeud 0 ne compte pas
 	for (int i=1; i<nb_total_visite; i++){
-            if (i<N+V)
-            {                             
-                s[i] = mon_modele.intVar("s_"+i, 1,nb_total_visite);
+            if (i<N+V){                             // concerne les clients et les dépots de départ de tous les véhicules
+                s[i] = mon_modele.intVar("succ_"+i, 1,nb_total_visite);
             }
-            else{ // pour les dépots de retour
-                s[i] = mon_modele.intVar("s_"+i, i-V);  
-            } 
+            else{
+                 s[i] = mon_modele.intVar("succ_"+i, 0);  // les successeurs des dépots d'arrivée valent 0 (pas de successeurs possibles)
+            }
 	}
        
         // contrainte 3 : définition de l'affectation des routes
-        a[0] = mon_modele.intVar("a_0", 0); // sommet 0 est fictif
+        a[0] = mon_modele.intVar("s_0", 0); // sommet 0 est fictif
         for (int i=1; i<N; i++){
-            a[i] = mon_modele.intVar("a_"+i, 1,V); 
+            a[i] = mon_modele.intVar("s_"+i, 1,V); 
 	}
         
        // contrainte 4 : cas des dépots de départ et d'arrivée        
         for (int i=1; i<=V; i++){
             int position=N+i-1; // dépot de départ du véhicule i
-            a[position] = mon_modele.intVar("a_"+position, i);
+            a[position] = mon_modele.intVar("route_"+position, i);
             position=N+i+V-1; // dépot d'arrivé du véhicule i
-            a[position] = mon_modele.intVar("a_"+position, i);
+            a[position] = mon_modele.intVar("route_"+position, i);
         }
         
         // contrainte 5 : définition des rangs
@@ -144,63 +138,59 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Cumul_Channeling_Vrp_3 {
 	for (int i=1; i<N; i++){
             p[i] = mon_modele.intVar("rang_"+i, 1,N);
         }
-        
-	for (int i=N+V; i<nb_total_visite; i++){
+        for (int i=N+V; i<nb_total_visite; i++){
             p[i] = mon_modele.intVar("rang_"+i, 1,N);
         }  
-        
-        
-        
-        
-        
         
         // contrainte 6 :  les dépot de départ sont toujours au rang 0 !
         for (int i=0; i<V; i++){
             int position=N+i;
-            p[position] = mon_modele.intVar("p_"+position, 0); 
+            p[position] = mon_modele.intVar("rang_"+position, 0); 
         }
               
-        // contrainte 7 :   tous les successeurs doivent être différent
-        //                  contrainte allDifferent, mais ne prend pas en compte les variables valent 0
+        // contrainte 7 
         mon_modele.allDifferentExcept0(s).post();
                         
-        // contrainte 8 : a[i]=a[s[i]]
+        // contrainte 8 
         for (int i=1; i<N+V; i++){
             mon_modele.element(a[i], a, s[i],0).post();
         }
                                   
-        //contrainte 9 : evite les sous-tours de taille 1 (optionel)
+        //contrainte 9 
          for (int i=1;i<N+V;i++){
-            mon_modele.arithm(s[i], "!=", i).post();
+            mon_modele.arithm( s[i], "!=", i).post();
         }
          
          //contrainte 10 : evite les sous tours
         for (int i=1;i<N+V;i++){
-            IntVar t=mon_modele.intVar("t_"+i,0,nb_total_visite); 
+            IntVar t=mon_modele.intVar(0,nb_total_visite); 
             mon_modele.arithm(t, "=", p[i], "+",1).post();
             mon_modele.element(t, p, s[i], 0).post();
         }
         
-        // contrainte 11 
+        // contrainte 11
         SetVar[] b;
         b = new SetVar[V+1];
-        int[] x_UB = new int[nb_total_visite];  
+        int[] x_UB = new int[nb_total_visite];   
         for (int i=1; i<nb_total_visite; i++) {
             x_UB[i]=i;
         }
-        int[] x_LB = new int[]{};  
+        int[] x_LB = new int[]{}; 
         
         for (int i=0; i<=V; i++){
             b[i]=mon_modele.setVar("sets_"+i, x_LB, x_UB);
         }
         
-        // Contrainte 12
+        // contrainte 12
         mon_modele.setsIntsChanneling(b, a).post();  
         for (int i=1; i<=V; i++){
-            IntVar sum=mon_modele.intVar("Sum_b_"+i,0,C[i]);    
+            IntVar sum=mon_modele.intVar(0,C[i]);    
             mon_modele.sumElements(b[i], D, sum).post();  
         }
-          
+       
+         
+        
+        
         // contrainte 13
         IntVar[] dp; // distance entre i et j
 	IntVar d; // objectif
@@ -213,17 +203,19 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Cumul_Channeling_Vrp_3 {
             mon_modele.element(dp[i], T_prime[i], s[i]).post();
 	}
         d = mon_modele.intVar("d", 0, H);
-        mon_modele.sum(dp, "=", d).post();       
-        // fonction objective
-	mon_modele.setObjective(Model.MINIMIZE, d);
-                 
-        //  contrainte 14       
+        mon_modele.sum(dp, "=", d).post();     
+        
+        
+                       
+        // contrainte 14      
         for (int i=N;i<N+V-1;i++){
             mon_modele.arithm(s[i], "<", s[i+1]).post();
         }
-       
         
-        // contrainte 15 et 16
+        
+
+        // contraine 15 et 16
+        
         IntVar[] y; 
         y = new IntVar[nb_total_visite];
         y[0] = mon_modele.intVar(0);
@@ -242,52 +234,29 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Cumul_Channeling_Vrp_3 {
             ligne[2] = s[i];                
 	    mon_modele.scalar(ligne, coeffs,"=",0).post();
 	}
-
-      
-       //  contrainte cumulative
-       Task[] tasks = new Task[N-1];
-       for (int i=0; i<N-1; i++){
-          tasks[i]=mon_modele.taskVar(a[i+1], 1);
-       }
-       IntVar Demande[] = new IntVar[N-1];
-       for (int i=0; i<N-1; i++)
-       {
-        Demande[i] = mon_modele.intVar(D[i+1]); 
-       }
-       IntVar Int_CapaMax;
-       Int_CapaMax = mon_modele.intVar(CapaMax); 
-             
-       mon_modele.cumulative(tasks, Demande, Int_CapaMax).post();
-               
-       // contraintes 17-18-19
-       IntVar[] pred = mon_modele.intVarArray("pred", nb_total_visite, 0, nb_total_visite);
-       mon_modele.inverseChanneling(s, pred).post();
-              
-               
-       Solver mon_solveur= mon_modele.getSolver();
-       
-          
-       
-        // résolution
-
-        mon_solveur.showStatistics();
-
         
-        // strategie par défaut sur Y 
-       mon_solveur.setSearch( 
-  	new DomOverWDeg(y, 0, new IntDomainMin())); 
-
-
-
-       	Solution solution = new Solution(mon_modele);
+        
+        
+        // fonction objective
+	mon_modele.setObjective(Model.MINIMIZE, d);
+        
+        
+        
+	Solver mon_solveur= mon_modele.getSolver();
+	Solution solution = new Solution(mon_modele);
                 
         Date heure_debut= new Date();
 	long h_debut = heure_debut.getTime();
-       
 
-	
+
+      // mon_solveur.setSearch( 
+  //	new DomOverWDeg(y, 0, new IntDomainMin())); 
         
-        while (mon_solveur.solve()){
+        
+        // résolution
+       // mon_solveur.showDecisions();
+        mon_solveur.showStatistics();
+	while (mon_solveur.solve()){
             solution.record(); 
             Date heure_fin = new Date();
             long h_fin= heure_fin.getTime();

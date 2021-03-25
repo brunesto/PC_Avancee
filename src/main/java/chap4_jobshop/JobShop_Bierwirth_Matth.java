@@ -1,4 +1,4 @@
-package job.shop_bierwirth_matth;
+package chap4_jobshop;
 
 import java.io.*;
 import java.text.*;
@@ -520,7 +520,7 @@ public class JobShop_Bierwirth_Matth {
                 nom_instance = "la" + Integer.toString(inst);
             }
 
-            chemin_instance = "./data/jobshop/instance/" + nom_instance + ".txt";
+            chemin_instance = "./data/chap4_jobshop/instance/" + nom_instance + ".txt";
             best_sol = Dmax;
             best_temps = 9999;
 
@@ -585,7 +585,7 @@ public class JobShop_Bierwirth_Matth {
                 nom_instance = "la" + Integer.toString(inst);
             }
 
-            chemin_instance = "./data/jobshop/instance/" + nom_instance + ".txt";
+            chemin_instance = "./data/chap4_jobshop/instance/" + nom_instance + ".txt";
             best_sol = Dmax;
             best_temps = 9999;
 

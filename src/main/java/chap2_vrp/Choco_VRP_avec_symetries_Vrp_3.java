@@ -1,5 +1,5 @@
 
-package vrp_3;
+package chap2_vrp;
 
 import java.util.Date;
 import org.chocosolver.solver.Model;
@@ -12,24 +12,24 @@ import org.chocosolver.solver.variables.SetVar;
 import org.chocosolver.util.ESat;
 
 
-public class Choco_VRP_Symetric_variable_liee_Branch_Y_Vrp_3 {
+public class Choco_VRP_avec_symetries_Vrp_3 {
 
        public static void main(String[] args) {
-         
+
          int CapaMax=10;  
            
         // les paramétres
         int N=10; // nombre de customers dont le dépot fictif qui est le customer 0
         int V=4;  // nombre de véhicules
         
-        
+       
         // le sommet 0 est le dépot
         int nb_total_visite=N+V*2;
         
         
 	// les données
-	int H=100; // borne sup. de la distance
-	int[][] T; // matrice des distances
+	int H=100; 
+	int[][] T;
         int[] D; 
         D= new int[nb_total_visite];
         int[] C; 
@@ -104,7 +104,8 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Vrp_3 {
         p = new IntVar[nb_total_visite];
         
         
-           // contraintes 1 et 2 
+        
+        // contraintes 1 et 2 
         s[0] = mon_modele.intVar("succ_0", -1);    
 	for (int i=1; i<nb_total_visite; i++){
             if (i<N+V){                            
@@ -139,14 +140,13 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Vrp_3 {
             p[i] = mon_modele.intVar("rang_"+i, 1,N);
         }        
         
-        
-        // contrainte 6 
+        // contrainte 6 :  les dépot de départ sont toujours au rang 0 !
         for (int i=0; i<V; i++){
             int position=N+i;
             p[position] = mon_modele.intVar("rang_"+position, 0); 
         }
               
-        // contrainte 7 
+        // contrainte 7 :   
         mon_modele.allDifferentExcept0(s).post();
                         
         // contrainte 8 : a[i]=a[s[i]]
@@ -154,12 +154,12 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Vrp_3 {
             mon_modele.element(a[i], a, s[i],0).post();
         }
                                   
-        //contrainte 9 
+        //contrainte 9 : evite les sous-tours de taille 1 (optionel)
          for (int i=1;i<N+V;i++){
             mon_modele.arithm( s[i], "!=", i).post();
         }
          
-         //contrainte 10
+         //contrainte 10 : evite les sous tours
         for (int i=1;i<N+V;i++){
             IntVar t=mon_modele.intVar(0,nb_total_visite); 
             mon_modele.arithm(t, "=", p[i], "+",1).post();
@@ -169,11 +169,11 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Vrp_3 {
         // contrainte 11 
         SetVar[] b;
         b = new SetVar[V+1];
-        int[] x_UB = new int[nb_total_visite];   // valeurs qui peuvent appartenir à l’ensemble
+        int[] x_UB = new int[nb_total_visite];   
         for (int i=1; i<nb_total_visite; i++) {
             x_UB[i]=i;
         }
-        int[] x_LB = new int[]{};  // valeurs qui doivent appartenir à l’ensemble
+        int[] x_LB = new int[]{};  
         
         for (int i=0; i<=V; i++){
             b[i]=mon_modele.setVar("sets_"+i, x_LB, x_UB);
@@ -185,12 +185,9 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Vrp_3 {
             IntVar sum=mon_modele.intVar(0,C[i]);    
             mon_modele.sumElements(b[i], D, sum).post();  
         }
-       
-
         
-        
-        // contrainte 13
-        IntVar[] dp; 
+        // contrainte 13.1
+        IntVar[] dp; // distance entre i et j
 	IntVar d; // objectif
         dp = new IntVar[nb_total_visite];
         dp[0] = mon_modele.intVar(0);
@@ -198,57 +195,28 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Vrp_3 {
           dp[i] = mon_modele.intVar("dp_"+i, 0,H);
         }
         for (int i=1;i<nb_total_visite;i++){
+            // contrainte 13.2
             mon_modele.element(dp[i], T_prime[i], s[i]).post();
 	}
+        // contrainte 13.3
         d = mon_modele.intVar("d", 0, H);
         mon_modele.sum(dp, "=", d).post();       
+        // fonction objective
+	mon_modele.setObjective(Model.MINIMIZE, d);
+       
         
         
-                       
-        //contrainte 14      
+        
+        // contrainte 14     
         for (int i=N;i<N+V-1;i++){
             mon_modele.arithm(s[i], "<", s[i+1]).post();
         }
-               
-        
-        // contraine 15 et 16
-        
-        IntVar[] y; 
-        y = new IntVar[nb_total_visite];
-        y[0] = mon_modele.intVar(0);
-        for (int i=1; i<nb_total_visite; i++){
-          y[i] = mon_modele.intVar("y_"+i, 0,100*H+nb_total_visite);
-        }
-        
-	int[] coeffs = new int[3];
-        coeffs[0] = 1;
-        coeffs[1] = -100;
-        coeffs[2] = -1;	
-        for (int i=1; i<nb_total_visite; i++){
-   	    IntVar[] ligne = new IntVar[3]; 
-            ligne[0] = y[i];
-            ligne[1] = a[i];
-            ligne[2] = s[i];                
-	    mon_modele.scalar(ligne, coeffs,"=",0).post();
-	}        
-        
-        
-        // fonction objective
-	mon_modele.setObjective(Model.MINIMIZE, d);
-        
-        
         
 	Solver mon_solveur= mon_modele.getSolver();
 	Solution solution = new Solution(mon_modele);
                 
         Date heure_debut= new Date();
 	long h_debut = heure_debut.getTime();
-
-
-
-       mon_solveur.setSearch( 
-  	new DomOverWDeg(y, 0, new IntDomainMin())); 
-        
         
         // résolution
        // mon_solveur.showDecisions();
@@ -262,8 +230,6 @@ public class Choco_VRP_Symetric_variable_liee_Branch_Y_Vrp_3 {
             System.out.println("temps : " + duree_s + " s    " + d.toString());
             System.out.println("----------");
 	}
-        
-       
  
         // affichage final si une solution a été trouvée
 	if (mon_solveur.isFeasible() == ESat.TRUE){

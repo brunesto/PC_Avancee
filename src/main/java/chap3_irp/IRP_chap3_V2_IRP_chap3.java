@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package IRP_chap3;
+package chap3_irp;
 
 import java.io.BufferedReader;
 import java.util.*;
@@ -23,12 +23,11 @@ import java.io.StreamTokenizer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import org.chocosolver.solver.constraints.nary.cumulative.Cumulative;
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainLast;
 import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
 import org.chocosolver.util.ESat;
 
-public class IRP_chap3_V2_Cumul_IRP_chap3 {
+public class IRP_chap3_V2_IRP_chap3 {
 
     // var. Globale      
     public static int CapaMax = 289;  // capacité des camions
@@ -134,7 +133,8 @@ public class IRP_chap3_V2_Cumul_IRP_chap3 {
             } else {
                 System.out.println("pas de nombre entier a  lire");
             }
-            CapaMax = (int) (CapaMax / V);
+
+            CapaMax = (int) (CapaMax / 2);
             C[0] = 0;
             for (int i = 1; i <= V; i++) {
                 C[i] = CapaMax;
@@ -781,37 +781,6 @@ public class IRP_chap3_V2_Cumul_IRP_chap3 {
             K = K + 1;
         }
 
-        // contrainte 35-36
-        //supprimer les commentaires pour ajouter les contraintes cumulatives
-        for (int i = 1; i < N; i++) {
-            // Producteur
-            Task[] tasks = new Task[3 * K];
-            IntVar[] heights = new IntVar[3 * K];
-            for (int k = 0; k < K; k++) {
-                tasks[k] = mon_modele.taskVar(mon_modele.intVar(0), k);
-                heights[k] = g[i][k];
-            }
-            //consomamteur
-            for (int k = 0; k < K; k++) {
-                tasks[K + k] = mon_modele.taskVar(mon_modele.intVar(k), K - k + 1);
-                heights[K + k] = mon_modele.intVar(D[i][k]);
-            }
-
-            // Stock
-            for (int k = 0; k < K; k++) {
-                tasks[2 * K + k] = mon_modele.taskVar(mon_modele.intVar(k), 1);
-                heights[2 * K + k] = Stock[i][k];
-            }
-
-            //Borne sup. de la cumulative
-            int UBCumul = 0;
-            for (int k = 0; k < K; k++) {
-                UBCumul = UBCumul + D[i][k];
-            }
-            mon_modele.cumulative(tasks, heights,
-                    mon_modele.intVar(Stock_max_client[i] + UBCumul + Stock_Initial_client[i])).post();
-        }
-
         // ***************** MINIMISATION ***************//
         mon_modele.setObjective(Model.MINIMIZE, mon_objectif);
 
@@ -934,7 +903,25 @@ public class IRP_chap3_V2_Cumul_IRP_chap3 {
             );
 
         } else {
+// search strategy
+            // 1/ g compatible with D & indomainMin  ==>  Z1=|gik-Dik] with Z2=2Z1  Z=Z2+greaterBoolean
+            //    Start with Z=0 ie gik=Dik then Z1=1 with gik=Dik-1 and gik=Dik+1; Z=2 gik=Dik+-2 etc
+            IntVar[] Z1 = mon_modele.intVarArray("Z1", (nb_total_visite - 1) * K, 0, 10000);
+            IntVar[] Z1PlusMoins = mon_modele.intVarArray("Z1+-", (nb_total_visite - 1) * K, -100000, 10000);
+            IntVar[] Z2 = mon_modele.intVarArray("Z1", (nb_total_visite - 1) * K, 0, 10000);
+            BoolVar[] GGreaterD = mon_modele.boolVarArray("G>D", (nb_total_visite - 1) * K);
+            IntVar[] Z = mon_modele.intVarArray("Z", (nb_total_visite - 1) * K, 0, 10000);
+            for (int i = 1; i < nb_total_visite - 1; i++) {
+                for (int k = 0; k < K; k++) {
+                    mon_modele.arithm(Z1PlusMoins[i * K + k], "+", g_linear[i * K + k], "=", D[i][k]);
+                    mon_modele.absolute(Z1[i * K + k], Z1PlusMoins[i * K + k]).post();
+                    mon_modele.scalar(new IntVar[]{Z1[i * K + k], Z2[i * K + k]}, new int[]{2, -1}, "=", 0).post();
+                    mon_modele.reifyXgtC(g_linear[i * K + k], D[i][k], GGreaterD[i * K + k]);
+                    mon_modele.arithm(Z2[i * K + k], "+", GGreaterD[i * K + k], "=", Z[i * K + k]).post();
+                }
+            }
             mon_solveur.setSearch(
+                    new DomOverWDeg(Z, 0, new IntDomainMin()), // 
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
@@ -962,8 +949,6 @@ public class IRP_chap3_V2_Cumul_IRP_chap3 {
                     )
             );
         }
-
-        mon_solveur.showShortStatistics();
 
         while (mon_solveur.solve()) {
             solution.record();
@@ -994,6 +979,24 @@ public class IRP_chap3_V2_Cumul_IRP_chap3 {
                 }
             }
 
+//            for (int i = 1; i < N; i++) {
+//                System.out.println("Client " + i + " : ");
+//                System.out.print(Stock_Initial_client[i] + " |  ");
+//                for (int u = 1; u < K; u++) {
+//                    int vv = Stock[i][u].getLB();
+//                    int ss = solution.getIntVal(Stock[i][u]);
+//                    System.out.print(ss + " |  ");
+//                }
+//                System.out.println();
+//                System.out.println("Client " + i + " : ");
+//                for (int u = 0; u < K; u++) {
+//                    int ss = solution.getIntVal(g[i][u]);
+//                    System.out.print(ss + " |  ");
+//                }
+//                System.out.println();
+//                System.out.println();
+//                System.out.println();
+//            }
             double[] Cs = solution.getRealBounds(cout_stockage);
             int cout_sol = solution.getIntVal(d_total);
             mon_obj = solution.getRealBounds(mon_objectif);
@@ -1018,16 +1021,152 @@ public class IRP_chap3_V2_Cumul_IRP_chap3 {
     // ******************************************************************* //
     // *************** programmpe principal                            *** //
     // ******************************************************************* //
+    // public static void resoudre(int distance_max, 
+    //                            int repartir_solution,
+    //                            int duree_maximale)
     public static void main(String[] args) {
 
-        String fichier_entree = "./data/irp/abs1n5.dat";
+        try {
+            String fichier_entree = "./data/chap3_irp/abs1n5_10p.dat";
 
-        lire_fichier(fichier_entree);
-        int nb_periode = K;
+            lire_fichier(fichier_entree);
+            int nb_periode = K;
 
-        K = 3;
-        resoudre(-1, 0, 30);
+            // pour une résolution directe de abs1n5_10p.dat
+            // faire
+            // K = 10;
+            // resoudre(-1, 0, 300);        
+            // resolution pour le période 1.
+            K = 1;
+            resoudre(-1, 0, 30);
 
+            int borne_inf = -1;
+            borne_inf = (int) mon_obj[0];
+
+            // on sauvergarde la solution
+            g_linear_initial = new int[(nb_total_visite - 1) * (K + 1)];
+            for (int i = 0; i < (nb_total_visite - 1) * (K); i++) {
+                g_linear_initial[i] = solution.getIntVal(g_linear[i]);
+            }
+            for (int i = (nb_total_visite - 1) * (K); i < (nb_total_visite - 1) * (K + 1); i++) {
+                g_linear_initial[i] = 0;
+            }
+
+            y_linear_initial = new int[(K + 1) * N];
+
+            for (int i = 0; i < K * N; i++) {
+                y_linear_initial[i] = solution.getIntVal(y_linear[i]);
+            }
+            for (int i = K * N; i < (K + 1) * N; i++) {
+                y_linear_initial[i] = 0;
+            }
+            Stock_linear_initial = new int[(N - 1) * (K + 1)];
+            for (int i = 0; i < (N - 1) * (K); i++) {
+                Stock_linear_initial[i] = solution.getIntVal(Stock_linear[i]);
+            }
+            for (int i = (N - 1) * (K); i < (N - 1) * (K + 1); i++) {
+                Stock_linear_initial[i] = 0;
+            }
+
+            p_linear_initial = new int[(nb_total_visite) * (K + 1)];
+            for (int i = 0; i < (nb_total_visite) * (K); i++) {
+                p_linear_initial[i] = solution.getIntVal(p_linear[i]);
+            }
+            for (int i = (nb_total_visite) * (K); i < (nb_total_visite) * (K + 1); i++) {
+                p_linear_initial[i] = 0;
+            }
+
+            PStock_initial = new int[K + 2];
+            PStock_initial[0] = solution.getIntVal(PStock[0]);
+
+            for (int k = 1; k <= K; k++) {
+                PStock_initial[k] = solution.getIntVal(PStock[k]);
+            }
+            for (int k = K + 1; k <= K + 1; k++) {
+                PStock_initial[k] = 0;
+            }
+
+            // définition de SV
+            Sv = new int[nb_total_visite][K];
+            for (int i = 1; i < N + V; i++) {
+                for (int u = 0; u < K; u++) {
+                    Sv[i][u] = solution.getIntVal(s[i][u]);
+                }
+            }
+
+            // les iterations 
+            for (int periode = 2; periode <= nb_periode; periode++) {
+                System.out.println("--------- " + periode + " ---------");
+                System.out.println();
+
+                /* System.gc();
+            Runtime.getRuntime().gc();
+            try{
+            Thread.sleep(3000);            
+            }catch(InterruptedException e){
+            System.out.println(e.getMessage()); 
+            }    */
+                K = periode;
+                resoudre(4, 1, periode * 10);
+
+                borne_inf = (int) mon_obj[0];
+
+                g_linear_initial = new int[(nb_total_visite - 1) * (K + 1)];
+                for (int i = 0; i < (nb_total_visite - 1) * (K); i++) {
+                    g_linear_initial[i] = solution.getIntVal(g_linear[i]);
+                }
+                for (int i = (nb_total_visite - 1) * (K); i < (nb_total_visite - 1) * (K + 1); i++) {
+                    g_linear_initial[i] = 0;
+                }
+
+                y_linear_initial = new int[(K + 1) * N];
+
+                for (int i = 0; i < K * N; i++) {
+                    y_linear_initial[i] = solution.getIntVal(y_linear[i]);
+                }
+                for (int i = K * N; i < (K + 1) * N; i++) {
+                    y_linear_initial[i] = 0;
+                }
+                Stock_linear_initial = new int[(N - 1) * (K + 1)];
+                for (int i = 0; i < (N - 1) * (K); i++) {
+                    Stock_linear_initial[i] = solution.getIntVal(Stock_linear[i]);
+                }
+                for (int i = (N - 1) * (K); i < (N - 1) * (K + 1); i++) {
+                    Stock_linear_initial[i] = 0;
+                }
+
+                p_linear_initial = new int[(nb_total_visite) * (K + 1)];
+                for (int i = 0; i < (nb_total_visite) * (K); i++) {
+                    p_linear_initial[i] = solution.getIntVal(p_linear[i]);
+                }
+                for (int i = (nb_total_visite) * (K); i < (nb_total_visite) * (K + 1); i++) {
+                    p_linear_initial[i] = 0;
+                }
+
+                PStock_initial = new int[K + 2];
+                PStock_initial[0] = solution.getIntVal(PStock[0]);
+
+                for (int k = 1; k <= K; k++) {
+                    PStock_initial[k] = solution.getIntVal(PStock[k]);
+                }
+                for (int k = K + 1; k <= K + 1; k++) {
+                    PStock_initial[k] = 0;
+                }
+
+                // définition de SV
+                Sv = new int[nb_total_visite][K];
+                for (int i = 1; i < N + V; i++) {
+                    for (int u = 0; u < K; u++) {
+                        Sv[i][u] = solution.getIntVal(s[i][u]);
+                    }
+                }
+
+            } // fin des iterations
+            System.gc();
+            System.out.println("fin des iterations");
+        } catch (Exception E) {
+            System.out.println(E.getMessage());
+        }
     }
 
 }

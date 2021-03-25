@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package job.shop_bierwirth_matth;
+package chap4_jobshop;
 
 import org.chocosolver.solver.trace.IMessage;
 import org.chocosolver.solver.variables.IntVar;

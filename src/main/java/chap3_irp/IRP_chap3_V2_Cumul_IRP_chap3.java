@@ -3,8 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package IRP_chap3;
+package chap3_irp;
 
+import java.io.BufferedReader;
 import java.util.*;
 import org.chocosolver.solver.*;
 import org.chocosolver.solver.search.strategy.Search;
@@ -16,21 +17,23 @@ import org.chocosolver.util.ESat;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StreamTokenizer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import org.chocosolver.solver.constraints.nary.cumulative.Cumulative;
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainLast;
 import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
 import org.chocosolver.util.ESat;
 
-public class IRP_chap3_IRP_chap3 {
+public class IRP_chap3_V2_Cumul_IRP_chap3 {
 
     // var. Globale      
-    public static int CapaMax = 144;  // capacité des camions
+    public static int CapaMax = 289;  // capacité des camions
     public static int G = 9999;
-    public static int borne_sup_distance = 3000;
+    public static int borne_sup_distance = 30000;
     public static int N; // nombre de customers dont le dépot fictif qui est le customer 0
     public static int V;  // nombre de véhicules
     public static int V_etoile; // camion fictif qui n'existe nulle part       
@@ -63,6 +66,7 @@ public class IRP_chap3_IRP_chap3 {
     public static IntVar[] p_linear;
     public static IntVar[] g_linear;             // quantité livrée
     public static IntVar[] PStock;
+    public static IntVar[][] s;
 
     public static int[] g_linear_initial;
     public static int[] Stock_linear_initial;
@@ -70,191 +74,235 @@ public class IRP_chap3_IRP_chap3 {
     public static int[] p_linear_initial;
     public static int[] PStock_initial;
 
-    public static void demonstration() {
+    public static double[] mon_obj;
 
-        CapaMax = 289;  // capacité des camions
+    public static void lire_fichier(String nom_fichier_data) {
+        try {
+            File source = null;
+            source = new File(nom_fichier_data);
+            FileReader Input = new FileReader(source);
+            StreamTokenizer Lecteur;
+            Lecteur = new StreamTokenizer(Input);
+            Lecteur.parseNumbers();
+            int nombre = 0;
 
-        G = 9999;
+            G = 9999;
+            borne_sup_distance = 30000;
 
-        borne_sup_distance = 3000;
-
-        // les paramétres
-        N = 6; // nombre de customers dont le dépot fictif qui est le customer 0
-        V = 2;  // nombre de véhicules
-        V_etoile = 5; // camion fictif qui n'existe nulle part
-
-        K = 3;  // nombre de périodes
-        //  int MS=10; // stock maximal (identique pour tous les clients)
-
-        // le sommet 0 est le dépot
-        // Astuce : pour chaque véhicule, on créé 2 dépots : le dépot de départ et le dépot d'arrivée
-        //          Et on supprime le noeud 0
-        nb_total_visite = N + V * 2;
-
-        // les données
-        H = 3000; // borne sup. de la distance
-        H_stock = 300000; // borne sup. du stock
-
-        // pour chaque client i, D_i_p_k demande en produit p pour la période k
-        D = new int[nb_total_visite][K];
-        C = new int[V + 1];
-
-        // les données // 0 est le depot
-        T = new int[][]{
-            {0, 85, 349, 17, 203, 289},
-            {85, 0, 265, 102, 214, 226},
-            {349, 265, 0, 365, 368, 238},
-            {17, 102, 366, 0, 207, 302},
-            {203, 214, 368, 207, 0, 431},
-            {289, 226, 238, 302, 431, 0}
-        };
-
-        // produit 0 période 0          
-        D[0][0] = 0;
-        D[1][0] = 65;
-        D[2][0] = 35;
-        D[3][0] = 58;
-        D[4][0] = 24;
-        D[5][0] = 11;
-        // produit 0 période 1          
-        D[0][1] = 0;
-        D[1][1] = 65;
-        D[2][1] = 35;
-        D[3][1] = 58;
-        D[4][1] = 24;
-        D[5][1] = 11;
-        // produit 0 période 1          
-        D[0][2] = 0;
-        D[1][2] = 65;
-        D[2][2] = 35;
-        D[3][2] = 58;
-        D[4][2] = 24;
-        D[5][2] = 11;
-
-        for (int i = N; i < nb_total_visite; i++) {
-            for (int k = 1; k < K; k++) {
-                D[i][k] = 0;
+            // nb de client
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                N = (int) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
             }
+            // autant de véhicule que de clients
+            V = 2;
+            //V_etoile = 5 ; // camion fictif qui n'existe nulle part
+
+            // nb de période
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                K = (int) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
+            }
+
+            // le sommet 0 est le dépot
+            nb_total_visite = N + V * 2;
+            // les données
+            H = 30000; // borne sup. de la distance
+            H_stock = 300000; // borne sup. du stock
+            // creation des tableaux contenant les coordonnées
+            Coor_x = new double[N + 1];
+            Coor_y = new double[N + 1];
+            Prod = new int[K + 1];
+            Stock_Initial_client = new int[N];
+            Stock_min_Producteur = new int[1];
+            Stock_min_client = new int[N];
+            Stock_max_client = new int[N];
+            D = new int[nb_total_visite][K];
+            C = new int[V + 1];
+            cout_stockage_client = new float[N];
+            T = new int[N][N];
+            T_prime = new int[nb_total_visite][nb_total_visite];
+
+            // capamax
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                CapaMax = (int) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
+            }
+            CapaMax = (int) (CapaMax / V);
+            C[0] = 0;
+            for (int i = 1; i <= V; i++) {
+                C[i] = CapaMax;
+            }
+
+            // lecture ligne fournisseur
+            int bidon;
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                bidon = (int) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
+            }
+            // lecture ligne fournisseur
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                Coor_x[0] = (int) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
+            }
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                Coor_y[0] = (int) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
+            }
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                Stock_Initial_Producteur = (int) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
+            }
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                Prod[0] = (int) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
+            }
+
+            for (int p = 1; p <= K; p++) {
+                Prod[p] = Prod[0];
+            }
+
+            Lecteur.nextToken();
+            if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                cout_stockage_producteur = (float) Lecteur.nval;
+            } else {
+                System.out.println("pas de nombre entier a  lire");
+            }
+
+            Stock_max_Producteur = new int[1];
+            Stock_max_Producteur[0] = 5000;
+
+            // les clients
+            for (int i = 1; i < N; i++) {
+                Lecteur.nextToken();
+                if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                    bidon = (int) Lecteur.nval;
+                } else {
+                    System.out.println("pas de nombre entier a  lire");
+                }
+                // lecture ligne fournisseur
+                Lecteur.nextToken();
+                if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                    Coor_x[i] = (int) Lecteur.nval;
+                } else {
+                    System.out.println("pas de nombre entier a  lire");
+                }
+                Lecteur.nextToken();
+                if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                    Coor_y[i] = (int) Lecteur.nval;
+                } else {
+                    System.out.println("pas de nombre entier a  lire");
+                }
+                Lecteur.nextToken();
+                if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                    Stock_Initial_client[i] = (int) Lecteur.nval;
+                } else {
+                    System.out.println("pas de nombre entier a  lire");
+                }
+                Lecteur.nextToken();
+                if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                    Stock_max_client[i] = (int) Lecteur.nval;
+                } else {
+                    System.out.println("pas de nombre entier a  lire");
+                }
+                Lecteur.nextToken();
+                if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                    Stock_min_client[i] = (int) Lecteur.nval;
+                } else {
+                    System.out.println("pas de nombre entier a  lire");
+                }
+                Lecteur.nextToken();
+                if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                    D[i][1] = (int) Lecteur.nval;
+                } else {
+                    System.out.println("pas de nombre entier a  lire");
+                }
+                D[i][0] = 0;
+                D[0][0] = 0;
+                for (int j = 0; j < K; j++) {
+                    D[i][j] = (int) Lecteur.nval;
+                }
+
+                Lecteur.nextToken();
+                if (Lecteur.ttype == Lecteur.TT_NUMBER) {
+                    cout_stockage_client[i] = (float) Lecteur.nval;
+                } else {
+                    System.out.println("pas de nombre entier a  lire");
+                }
+            }
+
+            for (int i = 0; i < N; i++) {
+                double ox = Coor_x[i];
+                double oy = Coor_y[i];
+                for (int j = 0; j < N; j++) {
+                    double ox2 = Coor_x[j];
+                    double oy2 = Coor_y[j];
+                    double dist = Math.abs(Coor_x[j] - Coor_x[i]) * Math.abs(Coor_x[j] - Coor_x[i]);
+                    dist = dist + Math.abs(Coor_y[j] - Coor_y[i]) * Math.abs(Coor_y[j] - Coor_y[i]);
+                    dist = Math.sqrt(dist);
+                    T[i][j] = (int) (Math.round(dist));
+                }
+            }
+
+            T_prime = new int[nb_total_visite][nb_total_visite];
+
+            // agrandissement de T
+            // ajout en fin de colonnes
+            for (int i = 0; i < N; i++) {
+                for (int j = 0; j < N; j++) {
+                    T_prime[i][j] = T[i][j];
+                }
+                for (int j = 0; j < V * 2; j++) {
+                    int position = N + j;
+                    T_prime[i][position] = T[i][0];
+                }
+            }
+
+            // ajout des lignes finales
+            for (int i = N; i < nb_total_visite; i++) {
+                for (int j = 0; j < V * 2; j++) {
+                    int position = N + j;
+                    T_prime[i][position] = 0;
+                }
+                for (int j = 0; j < N; j++) {
+                    T_prime[i][j] = T[0][j];
+                }
+            }
+
+            Input.close();
+        } catch (Exception e) {
+            System.out.println(e.toString());
         }
 
-        C[0] = 0;
-        C[1] = CapaMax;
-        C[2] = CapaMax;
-//        C[3]=CapaMax;  
-        // C[4]=CapaMax;
-
-        Stock_max_client = new int[N];
-        Stock_max_client[1] = 195;
-        Stock_max_client[2] = 105;
-        Stock_max_client[3] = 116;
-        Stock_max_client[4] = 72;
-        Stock_max_client[5] = 22;
-
-        Stock_min_client = new int[N];
-        Stock_min_client[1] = 0;
-        Stock_min_client[2] = 0;
-        Stock_min_client[3] = 0;
-        Stock_min_client[4] = 0;
-        Stock_min_client[5] = 0;
-
-        Stock_Initial_client = new int[N];
-        Stock_Initial_client[1] = 130;
-        Stock_Initial_client[2] = 70;
-        Stock_Initial_client[3] = 58;
-        Stock_Initial_client[4] = 48;
-        Stock_Initial_client[5] = 11;
-
-        Stock_min_Producteur = new int[1];
-        Stock_max_Producteur = new int[1];
-
-        // **************** le producteur ******************** //
-        Stock_min_Producteur[0] = 0;
-        Stock_max_Producteur[0] = 5000;
-        Stock_Initial_Producteur = 510;
-
-        Prod = new int[K];
-
-        Prod[0] = 193;
-        Prod[1] = 193;
-        Prod[2] = 193;
-
-        //******************************************************//
-        cout_stockage_producteur = (float) (0.3);
-        cout_stockage_client = new float[N];
-
-        cout_stockage_client[1] = (float) (0.23);
-        cout_stockage_client[2] = (float) (0.32);
-        cout_stockage_client[3] = (float) (0.33);
-        cout_stockage_client[4] = (float) (0.23);
-        cout_stockage_client[5] = (float) (0.18);
-
-        //******************************************************//
-        T_prime = new int[nb_total_visite][nb_total_visite];
-
-        // agrandissement de T
-        // ajout en fin de colonnes
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                T_prime[i][j] = T[i][j];
-            }
-            for (int j = 0; j < V * 2; j++) {
-                int position = N + j;
-                T_prime[i][position] = T[i][0];
-            }
-        }
-
-        // ajout des lignes finales
-        for (int i = N; i < nb_total_visite; i++) {
-            for (int j = 0; j < V * 2; j++) {
-                int position = N + j;
-                T_prime[i][position] = 0;
-            }
-            for (int j = 0; j < N; j++) {
-                T_prime[i][j] = T[0][j];
-            }
-        }
-
+        //******************************************************// 
     }
 
-    public static void initialiser_sol_depart() {
-        // contient des informations sur la solution de depart
-        Sv = new int[nb_total_visite][K];
-        for (int i = 1; i < N + V; i++) {
-            for (int u = 0; u < K; u++) {
-                Sv[i][u] = i;
-            }
-        }
-        Sv[6][0] = 1;
-        Sv[1][0] = 8;
-
-        Sv[2][0] = 2;
-        Sv[3][0] = 3;
-        Sv[4][0] = 4;
-        Sv[5][0] = 5;
-        //
-        Sv[7][1] = 3;
-        Sv[3][1] = 9;
-
-        Sv[6][1] = 2;
-        Sv[2][1] = 4;
-        Sv[4][1] = 5;
-        Sv[5][1] = 8;
-
-        Sv[1][2] = 1;
-        Sv[2][2] = 2;
-        Sv[3][2] = 3;
-        Sv[4][2] = 4;
-        Sv[5][2] = 5;
-    }
-
-    public static void resoudre(int distance_max, int duree_max) {
+    public static void resoudre(int distance_max,
+            int repartir_solution,
+            int duree_maximale) {
         // déclaration du modèle
         Model mon_modele;
         mon_modele = new Model("IRP en PPC");
 
         //*****************************************************************************//
         // contrainte 1.1 et 1.2 
-        IntVar[][] s;             // le successeur de chaque visite et par période
+        //   IntVar[][] s;             // le successeur de chaque visite et par période
         s = new IntVar[nb_total_visite][K];
 
         IntVar[][] s_t;             // le successeur de chaque visite et par période
@@ -278,6 +326,7 @@ public class IRP_chap3_IRP_chap3 {
             }
         }
 
+        // contrainte 2.3
         for (int k = 0; k < K; k++) {
             for (int i = 1; i < nb_total_visite; i++) {
 
@@ -668,11 +717,13 @@ public class IRP_chap3_IRP_chap3 {
                 ligne33[2] = s[i][k];
                 mon_modele.scalar(ligne33, coeffs33, "=", 0).post();
             }
+
         }
 
         // contrainte 29
         RealVar mon_objectif = mon_modele.realVar("mon_objectif", 0, 100 * H, 0.001);
 
+        //RealVar mon_objectif = mon_modele.realVar("mon_objectif", borne_inf_cout, borne_sup_cout, 0.001);
         // contrainte 30
         int tailleO = 3;
         double[] CoeffsO = new double[tailleO];
@@ -691,6 +742,7 @@ public class IRP_chap3_IRP_chap3 {
 
         // contrainte 31-34
         if (distance_max != -1) {
+            K = K - 1;
             // contrainte 31
             BoolVar[][] dist_M; // distance entre i et j
             dist_M = new BoolVar[N + V][K];
@@ -726,44 +778,41 @@ public class IRP_chap3_IRP_chap3 {
 
             // contrainte 34
             mon_modele.arithm(Distance, "<=", distance_max).post();
+            K = K + 1;
         }
 
-        // Sol de Archetti qui vaut 2366 
-        /*
-        mon_modele.arithm(s[6][0], "=", 1).post();
-        mon_modele.arithm(s[1][0], "=", 8).post();
-        
-        mon_modele.arithm(s[2][0], "=", 2).post();
-        mon_modele.arithm(s[3][0], "=", 3).post();
-        mon_modele.arithm(s[4][0], "=", 4).post();
-        mon_modele.arithm(s[5][0], "=", 5).post();
-        //
-        mon_modele.arithm(s[7][1], "=", 3).post();
-        mon_modele.arithm(s[3][1], "=", 9).post();
-        
-        mon_modele.arithm(s[6][1], "=", 2).post();
-        mon_modele.arithm(s[2][1], "=", 4).post();
-        mon_modele.arithm(s[4][1], "=", 5).post();
-        mon_modele.arithm(s[5][1], "=", 8).post();
-        
-        mon_modele.arithm(s[1][2], "=", 1).post();
-        mon_modele.arithm(s[2][2], "=", 2).post();
-        mon_modele.arithm(s[3][2], "=", 3).post();
-        mon_modele.arithm(s[4][2], "=", 4).post();
-        mon_modele.arithm(s[5][2], "=", 5).post();
-        
-        mon_modele.arithm(g[1][0], "=", 65).post();
-        mon_modele.arithm(g[2][1], "=", 35).post();
-        mon_modele.arithm(g[3][1], "=", 116).post();
-        mon_modele.arithm(g[4][1], "=", 48).post();
-        mon_modele.arithm(g[5][1], "=", 22).post();   
-         */
-        // resultat d'execution
-        // Pstock_1=638, Pstock_2=610, Pstock_3=803, 
-        // somme_0=65, somme_2=221, somme_3=0, 
-        // temps : 0 s   d = 1636
-        // Fin
-        // *************************************** //        
+        // contrainte 35-36
+        //supprimer les commentaires pour ajouter les contraintes cumulatives
+        for (int i = 1; i < N; i++) {
+            // Producteur
+            Task[] tasks = new Task[3 * K];
+            IntVar[] heights = new IntVar[3 * K];
+            for (int k = 0; k < K; k++) {
+                tasks[k] = mon_modele.taskVar(mon_modele.intVar(0), k);
+                heights[k] = g[i][k];
+            }
+            //consomamteur
+            for (int k = 0; k < K; k++) {
+                tasks[K + k] = mon_modele.taskVar(mon_modele.intVar(k), K - k + 1);
+                heights[K + k] = mon_modele.intVar(D[i][k]);
+            }
+
+            // Stock
+            for (int k = 0; k < K; k++) {
+                tasks[2 * K + k] = mon_modele.taskVar(mon_modele.intVar(k), 1);
+                heights[2 * K + k] = Stock[i][k];
+            }
+
+            //Borne sup. de la cumulative
+            int UBCumul = 0;
+            for (int k = 0; k < K; k++) {
+                UBCumul = UBCumul + D[i][k];
+            }
+            mon_modele.cumulative(tasks, heights,
+                    mon_modele.intVar(Stock_max_client[i] + UBCumul + Stock_Initial_client[i])).post();
+        }
+
+        // ***************** MINIMISATION ***************//
         mon_modele.setObjective(Model.MINIMIZE, mon_objectif);
 
         Solver mon_solveur = mon_modele.getSolver();
@@ -773,7 +822,7 @@ public class IRP_chap3_IRP_chap3 {
         Date heure_debut = new Date();
         long h_debut = heure_debut.getTime();
 
-        mon_solveur.limitTime(duree_max + "s");
+        mon_solveur.limitTime(duree_maximale + "s");
 
         // il faut lineariser le y
         y_linear = new IntVar[K * N];
@@ -821,7 +870,6 @@ public class IRP_chap3_IRP_chap3 {
                 // p[i][k] = mon_modele.intVar("p_"+i+"_"+k, 1,N);
             }
         }
-
         // il faut lineariser le g
         g_linear = new IntVar[(nb_total_visite - 1) * K];
         r = 0;
@@ -833,33 +881,89 @@ public class IRP_chap3_IRP_chap3 {
             }
         }
 
-        mon_solveur.setSearch(
-                Search.intVarSearch(
-                        new MaxRegret(), // selecteur de variable
-                        new IntDomainMin(), // choix de la valeur
-                        g_linear
-                ),
-                Search.intVarSearch(
-                        new MaxRegret(), // selecteur de variable
-                        new IntDomainMin(), // choix de la valeur
-                        y_linear
-                ),
-                Search.intVarSearch(
-                        new MaxRegret(), // selecteur de variable
-                        new IntDomainMin(), // choix de la valeur
-                        Stock_linear
-                ),
-                Search.intVarSearch(
-                        new MaxRegret(), // selecteur de variable
-                        new IntDomainMin(), // choix de la valeur
-                        PStock
-                ),
-                Search.intVarSearch(
-                        new MaxRegret(), // selecteur de variable
-                        new IntDomainMin(), // choix de la valeur
-                        p_linear
-                )
-        );
+        //******************************************************************************//
+        //*** repartir solution                                                      ***//
+        //***                                                                        ***//
+        //******************************************************************************//
+        Solution solution_init = new Solution(mon_modele);
+        if (repartir_solution == 1) {
+
+            for (int i = 0; i < (nb_total_visite - 1) * (K); i++) {
+                solution_init.setIntVal(g_linear[i], g_linear_initial[i]);
+            }
+
+            for (int i = 0; i < K * N; i++) {
+                solution_init.setIntVal(y_linear[i], y_linear_initial[i]);
+            }
+
+            for (int i = 0; i < (N - 1) * (K); i++) {
+                solution_init.setIntVal(Stock_linear[i], Stock_linear_initial[i]);
+            }
+
+            for (int i = 0; i < (nb_total_visite) * (K); i++) {
+                solution_init.setIntVal(p_linear[i], p_linear_initial[i]);
+
+            }
+            for (int k = 0; k <= K; k++) {
+                solution_init.setIntVal(PStock[k], PStock_initial[k]);
+            }
+        }
+
+        if (repartir_solution == 1) {
+            mon_solveur.setSearch(
+                    Search.intVarSearch(
+                            new FirstFail(mon_modele), // selecteur de variable
+                            new IntDomainLast(solution_init, new IntDomainMin()), // choix de la valeur
+                            g_linear),
+                    Search.intVarSearch(
+                            new FirstFail(mon_modele), // selecteur de variable
+                            new IntDomainLast(solution_init, new IntDomainMin()), // choix de la valeur
+                            y_linear),
+                    Search.intVarSearch(
+                            new FirstFail(mon_modele), // selecteur de variable
+                            new IntDomainLast(solution_init, new IntDomainMin()), // choix de la valeur
+                            Stock_linear),
+                    Search.intVarSearch(
+                            new FirstFail(mon_modele), // selecteur de variable
+                            new IntDomainLast(solution_init, new IntDomainMin()), // choix de la valeur
+                            PStock),
+                    Search.intVarSearch(
+                            new FirstFail(mon_modele), // selecteur de variable
+                            new IntDomainLast(solution_init, new IntDomainMin()), // choix de la valeur
+                            p_linear)
+            );
+
+        } else {
+            mon_solveur.setSearch(
+                    Search.intVarSearch(
+                            new MaxRegret(), // selecteur de variable
+                            new IntDomainMin(), // choix de la valeur
+                            g_linear
+                    ),
+                    Search.intVarSearch(
+                            new MaxRegret(), // selecteur de variable
+                            new IntDomainMin(), // choix de la valeur
+                            y_linear
+                    ),
+                    Search.intVarSearch(
+                            new MaxRegret(), // selecteur de variable
+                            new IntDomainMin(), // choix de la valeur
+                            Stock_linear
+                    ),
+                    Search.intVarSearch(
+                            new MaxRegret(), // selecteur de variable
+                            new IntDomainMin(), // choix de la valeur
+                            PStock
+                    ),
+                    Search.intVarSearch(
+                            new MaxRegret(), // selecteur de variable
+                            new IntDomainMin(), // choix de la valeur
+                            p_linear
+                    )
+            );
+        }
+
+        mon_solveur.showShortStatistics();
 
         while (mon_solveur.solve()) {
             solution.record();
@@ -876,7 +980,6 @@ public class IRP_chap3_IRP_chap3 {
 
         }
 
-        // affichage final si une solution a été trouvée
         if (mon_solveur.isFeasible() == ESat.TRUE) {
 
             for (int u = 0; u < K; u++) {
@@ -891,32 +994,10 @@ public class IRP_chap3_IRP_chap3 {
                 }
             }
 
-            for (int i = 1; i < N; i++) {
-                System.out.println("Client " + i + " : ");
-                System.out.print(Stock_Initial_client[i] + " |  ");
-                for (int u = 1; u < K; u++) {
-                    int vv = Stock[i][u].getLB();
-                    int ss = solution.getIntVal(Stock[i][u]);
-                    System.out.print(ss + " |  ");
-                }
-                System.out.println();
-                System.out.println("Client " + i + " : ");
-                for (int u = 0; u < K; u++) {
-                    int ss = solution.getIntVal(g[i][u]);
-                    System.out.print(ss + " |  ");
-                }
-                System.out.println();
-                System.out.println();
-                System.out.println();
-
-            }
-
             double[] Cs = solution.getRealBounds(cout_stockage);
             int cout_sol = solution.getIntVal(d_total);
-            double[] mon_obj = solution.getRealBounds(mon_objectif);
+            mon_obj = solution.getRealBounds(mon_objectif);
 
-            //System.out.println(solution.toString());
-            //	int cout =(int) mon_solveur.getBestSolutionValue(); 
             Date heure_fin = new Date();
             long h_fin = heure_fin.getTime();
             long duree = h_fin - h_debut;
@@ -939,11 +1020,13 @@ public class IRP_chap3_IRP_chap3 {
     // ******************************************************************* //
     public static void main(String[] args) {
 
-        demonstration();
+        String fichier_entree = "./data/chap3_irp/abs1n5.dat";
 
-        initialiser_sol_depart();
+        lire_fichier(fichier_entree);
+        int nb_periode = K;
 
-        resoudre(3, 10);
+        K = 3;
+        resoudre(-1, 0, 30);
 
     }
 

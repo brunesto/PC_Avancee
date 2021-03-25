@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package vrp_3;
+package chap2_vrp;
 
 import java.util.Date;
 import org.chocosolver.solver.Model;
