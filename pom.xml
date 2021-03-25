@@ -21,20 +21,15 @@
 	</build>
 	<dependencies>
 
-		<dependency>
-			<groupId>com.rinkai</groupId>
-			<artifactId>rinkaiopt</artifactId>
-			<version>1.0-SNAPSHOT</version>
-		</dependency>
 
 
 		<!-- https://mvnrepository.com/artifact/org.choco-solver/choco-solver -->
-<dependency>
-    <groupId>org.choco-solver</groupId>
-    <artifactId>choco-solver</artifactId>
-    <!-- version>4.10.7-SNAPSHOT</version-->
-    <version>4.10.0</version>
-</dependency>
+		<dependency>
+			<groupId>org.choco-solver</groupId>
+			<artifactId>choco-solver</artifactId>
+			<!-- version>4.10.7-SNAPSHOT</version -->
+			<version>4.10.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.slf4j</groupId>
