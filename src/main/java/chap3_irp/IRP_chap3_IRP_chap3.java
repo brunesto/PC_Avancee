@@ -5,36 +5,30 @@
  */
 package chap3_irp;
 
-import java.util.*;
-import org.chocosolver.solver.*;
+import java.util.Date;
+
+import org.chocosolver.solver.Model;
+import org.chocosolver.solver.Solution;
+import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.search.strategy.Search;
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin;
-import org.chocosolver.solver.search.strategy.selectors.variables.DomOverWDeg;
 import org.chocosolver.solver.search.strategy.selectors.variables.MaxRegret;
-import org.chocosolver.solver.variables.*;
-import org.chocosolver.util.ESat;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.PrintWriter;
-import java.io.StreamTokenizer;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import org.chocosolver.solver.search.strategy.selectors.values.IntDomainLast;
-import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
+import org.chocosolver.solver.variables.BoolVar;
+import org.chocosolver.solver.variables.IntVar;
+import org.chocosolver.solver.variables.RealVar;
+import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.util.ESat;
 
 public class IRP_chap3_IRP_chap3 {
 
     // var. Globale      
-    public static int CapaMax = 144;  // capacité des camions
+    public static int CapaMax = 144; // capacité des camions
     public static int G = 9999;
     public static int borne_sup_distance = 3000;
     public static int N; // nombre de customers dont le dépot fictif qui est le customer 0
-    public static int V;  // nombre de véhicules
+    public static int V; // nombre de véhicules
     public static int V_etoile; // camion fictif qui n'existe nulle part       
-    public static int K;  // nombre de périodes
+    public static int K; // nombre de périodes
     public static int nb_total_visite;
     public static int H; // borne sup. de la distance
     public static int H_stock; // borne sup. du stock
@@ -61,7 +55,7 @@ public class IRP_chap3_IRP_chap3 {
     public static IntVar[] y_linear;
     public static IntVar[] Stock_linear;
     public static IntVar[] p_linear;
-    public static IntVar[] g_linear;             // quantité livrée
+    public static IntVar[] g_linear; // quantité livrée
     public static IntVar[] PStock;
 
     public static int[] g_linear_initial;
@@ -72,7 +66,7 @@ public class IRP_chap3_IRP_chap3 {
 
     public static void demonstration() {
 
-        CapaMax = 289;  // capacité des camions
+        CapaMax = 289; // capacité des camions
 
         G = 9999;
 
@@ -80,10 +74,10 @@ public class IRP_chap3_IRP_chap3 {
 
         // les paramétres
         N = 6; // nombre de customers dont le dépot fictif qui est le customer 0
-        V = 2;  // nombre de véhicules
+        V = 2; // nombre de véhicules
         V_etoile = 5; // camion fictif qui n'existe nulle part
 
-        K = 3;  // nombre de périodes
+        K = 3; // nombre de périodes
         //  int MS=10; // stock maximal (identique pour tous les clients)
 
         // le sommet 0 est le dépot
@@ -100,13 +94,13 @@ public class IRP_chap3_IRP_chap3 {
         C = new int[V + 1];
 
         // les données // 0 est le depot
-        T = new int[][]{
-            {0, 85, 349, 17, 203, 289},
-            {85, 0, 265, 102, 214, 226},
-            {349, 265, 0, 365, 368, 238},
-            {17, 102, 366, 0, 207, 302},
-            {203, 214, 368, 207, 0, 431},
-            {289, 226, 238, 302, 431, 0}
+        T = new int[][] {
+                { 0, 85, 349, 17, 203, 289 },
+                { 85, 0, 265, 102, 214, 226 },
+                { 349, 265, 0, 365, 368, 238 },
+                { 17, 102, 366, 0, 207, 302 },
+                { 203, 214, 368, 207, 0, 431 },
+                { 289, 226, 238, 302, 431, 0 }
         };
 
         // produit 0 période 0          
@@ -140,7 +134,7 @@ public class IRP_chap3_IRP_chap3 {
         C[0] = 0;
         C[1] = CapaMax;
         C[2] = CapaMax;
-//        C[3]=CapaMax;  
+        //        C[3]=CapaMax;  
         // C[4]=CapaMax;
 
         Stock_max_client = new int[N];
@@ -254,10 +248,10 @@ public class IRP_chap3_IRP_chap3 {
 
         //*****************************************************************************//
         // contrainte 1.1 et 1.2 
-        IntVar[][] s;             // le successeur de chaque visite et par période
+        IntVar[][] s; // le successeur de chaque visite et par période
         s = new IntVar[nb_total_visite][K];
 
-        IntVar[][] s_t;             // le successeur de chaque visite et par période
+        IntVar[][] s_t; // le successeur de chaque visite et par période
         s_t = new IntVar[K][nb_total_visite];
 
         // contrainte 2.1 et 2.2
@@ -270,7 +264,7 @@ public class IRP_chap3_IRP_chap3 {
             for (int i = 1; i < nb_total_visite; i++) {
                 if (i < N + V) {
                     s[i][k] = mon_modele.intVar("s_" + i + "_" + k, 1, nb_total_visite);
-                    s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 1, nb_total_visite);     // le noeud 0 ne compte pas
+                    s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 1, nb_total_visite); // le noeud 0 ne compte pas
                 } else {
                     s[i][k] = mon_modele.intVar("s_" + i + "_" + k, 0);
                     s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 0);
@@ -390,13 +384,11 @@ public class IRP_chap3_IRP_chap3 {
                 // contrainte 9.2 et 9.3.
                 mon_modele.ifThenElse(bb[i][k],
                         mon_modele.arithm(s[i][k], "!=", i),
-                        mon_modele.arithm(s[i][k], "=", i)
-                );
+                        mon_modele.arithm(s[i][k], "=", i));
 
                 mon_modele.ifThenElse(bb[i][k],
                         mon_modele.arithm(s[i][k], "!=", i),
-                        mon_modele.arithm(a[i][k], "=", 0)
-                );
+                        mon_modele.arithm(a[i][k], "=", 0));
             }
         }
 
@@ -441,8 +433,7 @@ public class IRP_chap3_IRP_chap3 {
                 for (int k = 0; k < K; k++) {
 
                     mon_modele.reification(w[i][j][k],
-                            mon_modele.arithm(a[i][k], "=", j)
-                    );
+                            mon_modele.arithm(a[i][k], "=", j));
                 }
             }
         }
@@ -837,29 +828,23 @@ public class IRP_chap3_IRP_chap3 {
                 Search.intVarSearch(
                         new MaxRegret(), // selecteur de variable
                         new IntDomainMin(), // choix de la valeur
-                        g_linear
-                ),
+                        g_linear),
                 Search.intVarSearch(
                         new MaxRegret(), // selecteur de variable
                         new IntDomainMin(), // choix de la valeur
-                        y_linear
-                ),
+                        y_linear),
                 Search.intVarSearch(
                         new MaxRegret(), // selecteur de variable
                         new IntDomainMin(), // choix de la valeur
-                        Stock_linear
-                ),
+                        Stock_linear),
                 Search.intVarSearch(
                         new MaxRegret(), // selecteur de variable
                         new IntDomainMin(), // choix de la valeur
-                        PStock
-                ),
+                        PStock),
                 Search.intVarSearch(
                         new MaxRegret(), // selecteur de variable
                         new IntDomainMin(), // choix de la valeur
-                        p_linear
-                )
-        );
+                        p_linear));
 
         while (mon_solveur.solve()) {
             solution.record();

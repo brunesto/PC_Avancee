@@ -5,26 +5,23 @@
  */
 package chap3_irp;
 
-import java.io.BufferedReader;
-import java.util.*;
-import org.chocosolver.solver.*;
-import org.chocosolver.solver.search.strategy.Search;
-import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin;
-import org.chocosolver.solver.search.strategy.selectors.variables.DomOverWDeg;
-import org.chocosolver.solver.search.strategy.selectors.variables.MaxRegret;
-import org.chocosolver.solver.variables.*;
-import org.chocosolver.util.ESat;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.StreamTokenizer;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import org.chocosolver.solver.Model;
+import org.chocosolver.solver.Solution;
+import org.chocosolver.solver.Solver;
+import org.chocosolver.solver.search.strategy.Search;
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainLast;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin;
 import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
+import org.chocosolver.solver.search.strategy.selectors.variables.MaxRegret;
+import org.chocosolver.solver.variables.BoolVar;
+import org.chocosolver.solver.variables.IntVar;
+import org.chocosolver.solver.variables.RealVar;
+import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.util.ESat;
 
 public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
@@ -32,13 +29,13 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
     public static int randomisation = 1;
 
     // var. Globale      
-    public static int CapaMax = 289;  // capacité des camions
+    public static int CapaMax = 289; // capacité des camions
     public static int G = 9999;
     public static int borne_sup_distance = 30000;
     public static int N; // nombre de customers dont le dépot fictif qui est le customer 0
-    public static int V;  // nombre de véhicules
+    public static int V; // nombre de véhicules
     public static int V_etoile; // camion fictif qui n'existe nulle part       
-    public static int K;  // nombre de périodes
+    public static int K; // nombre de périodes
     public static int nb_total_visite;
     public static int H; // borne sup. de la distance
     public static int H_stock; // borne sup. du stock
@@ -65,7 +62,7 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
     public static IntVar[] y_linear;
     public static IntVar[] Stock_linear;
     public static IntVar[] p_linear;
-    public static IntVar[] g_linear;             // quantité livrée
+    public static IntVar[] g_linear; // quantité livrée
     public static IntVar[] PStock;
     public static IntVar[] PStockd;
     public static IntVar[][] s;
@@ -330,7 +327,7 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
         //   IntVar[][] s;             // le successeur de chaque visite et par période
         s = new IntVar[nb_total_visite][K];
 
-        IntVar[][] s_t;             // le successeur de chaque visite et par période
+        IntVar[][] s_t; // le successeur de chaque visite et par période
         s_t = new IntVar[K][nb_total_visite];
 
         // contrainte 2.1 et 2.2
@@ -343,7 +340,7 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
             for (int i = 1; i < nb_total_visite; i++) {
                 if (i < N + V) {
                     s[i][k] = mon_modele.intVar("s_" + i + "_" + k, 1, nb_total_visite);
-                    s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 1, nb_total_visite);     // le noeud 0 ne compte pas
+                    s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 1, nb_total_visite); // le noeud 0 ne compte pas
                 } else {
                     s[i][k] = mon_modele.intVar("s_" + i + "_" + k, 0);
                     s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 0);
@@ -352,26 +349,26 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
         }
 
         /*
-
-	mon_modele.arithm(s[6][0],"=",1).post();
-	mon_modele.arithm(s[1][0],"=",8).post();
-	mon_modele.arithm(s[2][0],"=",2).post();
-	mon_modele.arithm(s[3][0],"=",3).post();
-	mon_modele.arithm(s[4][0],"=",4).post();
-	mon_modele.arithm(s[5][0],"=",5).post();
-
-	mon_modele.arithm(s[7][1],"=",3).post();
-	mon_modele.arithm(s[3][1],"=",9).post();
-	mon_modele.arithm(s[6][1],"=",2).post();
-	mon_modele.arithm(s[2][1],"=",4).post();
-	mon_modele.arithm(s[4][1],"=",5).post();
-	mon_modele.arithm(s[5][1],"=",8).post();
-
-	mon_modele.arithm(s[1][2],"=",1).post();
-	mon_modele.arithm(s[2][2],"=",2).post();
-	mon_modele.arithm(s[3][2],"=",3).post();
-	mon_modele.arithm(s[4][2],"=",4).post();
-	mon_modele.arithm(s[5][2],"=",5).post();           
+        
+        mon_modele.arithm(s[6][0],"=",1).post();
+        mon_modele.arithm(s[1][0],"=",8).post();
+        mon_modele.arithm(s[2][0],"=",2).post();
+        mon_modele.arithm(s[3][0],"=",3).post();
+        mon_modele.arithm(s[4][0],"=",4).post();
+        mon_modele.arithm(s[5][0],"=",5).post();
+        
+        mon_modele.arithm(s[7][1],"=",3).post();
+        mon_modele.arithm(s[3][1],"=",9).post();
+        mon_modele.arithm(s[6][1],"=",2).post();
+        mon_modele.arithm(s[2][1],"=",4).post();
+        mon_modele.arithm(s[4][1],"=",5).post();
+        mon_modele.arithm(s[5][1],"=",8).post();
+        
+        mon_modele.arithm(s[1][2],"=",1).post();
+        mon_modele.arithm(s[2][2],"=",2).post();
+        mon_modele.arithm(s[3][2],"=",3).post();
+        mon_modele.arithm(s[4][2],"=",4).post();
+        mon_modele.arithm(s[5][2],"=",5).post();           
          */
         // contrainte 2.3
         for (int k = 0; k < K; k++) {
@@ -486,13 +483,11 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
                 // contrainte 9.2 et 9.3.
                 mon_modele.ifThenElse(bb[i][k],
                         mon_modele.arithm(s[i][k], "!=", i),
-                        mon_modele.arithm(s[i][k], "=", i)
-                );
+                        mon_modele.arithm(s[i][k], "=", i));
 
                 mon_modele.ifThenElse(bb[i][k],
                         mon_modele.arithm(s[i][k], "!=", i),
-                        mon_modele.arithm(a[i][k], "=", 0)
-                );
+                        mon_modele.arithm(a[i][k], "=", 0));
             }
         }
 
@@ -537,8 +532,7 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
                 for (int k = 0; k < K; k++) {
 
                     mon_modele.reification(w[i][j][k],
-                            mon_modele.arithm(a[i][k], "=", j)
-                    );
+                            mon_modele.arithm(a[i][k], "=", j));
                 }
             }
         }
@@ -915,7 +909,7 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
             //y[k][0] = mon_modele.intVar(0);
 
             for (int i = 1; i < N; i++) {
-//                y_linear[r] = mon_modele.intVar("y_linear_" + r, 0, 100 * H + N);
+                //                y_linear[r] = mon_modele.intVar("y_linear_" + r, 0, 100 * H + N);
                 //              mon_modele.arithm(y_linear[r], "=", y[k][i]).post();
                 y_linear[r] = y[k][i];
 
@@ -1013,8 +1007,7 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
                     Search.intVarSearch(
                             new FirstFail(mon_modele), // selecteur de variable
                             new IntDomainLast(solution_init, new IntDomainMin()), // choix de la valeur
-                            p_linear)
-            );
+                            p_linear));
 
         } else {
 
@@ -1027,34 +1020,28 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            g_linear
-                    ),
+                            g_linear),
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            y_linear
-                    ),
+                            y_linear),
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            Stock_linear
-                    ),
+                            Stock_linear),
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            PStock
-                    ),
+                            PStock),
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            p_linear
-                    )
-            );
+                            p_linear));
         }
 
         //  mon_solveur.showShortStatistics();
-//        mon_solveur.showDecisions();
-//        mon_solveur.showContradiction();
+        //        mon_solveur.showDecisions();
+        //        mon_solveur.showContradiction();
         while (mon_solveur.solve()) {
             solution.record();
             Date heure_fin = new Date();

@@ -5,38 +5,36 @@
  */
 package chap3_irp;
 
-import java.io.BufferedReader;
-import java.util.*;
-import org.chocosolver.solver.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.StreamTokenizer;
+import java.util.Date;
+
+import org.chocosolver.solver.Model;
+import org.chocosolver.solver.Solution;
+import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.search.strategy.Search;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainLast;
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin;
 import org.chocosolver.solver.search.strategy.selectors.variables.DomOverWDeg;
-import org.chocosolver.solver.search.strategy.selectors.variables.MaxRegret;
-import org.chocosolver.solver.variables.*;
-import org.chocosolver.util.ESat;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.StreamTokenizer;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import org.chocosolver.solver.search.strategy.selectors.values.IntDomainLast;
 import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
+import org.chocosolver.solver.search.strategy.selectors.variables.MaxRegret;
+import org.chocosolver.solver.variables.BoolVar;
+import org.chocosolver.solver.variables.IntVar;
+import org.chocosolver.solver.variables.RealVar;
+import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.util.ESat;
 
 public class IRP_chap3_V2_IRP_chap3 {
 
     // var. Globale      
-    public static int CapaMax = 289;  // capacité des camions
+    public static int CapaMax = 289; // capacité des camions
     public static int G = 9999;
     public static int borne_sup_distance = 30000;
     public static int N; // nombre de customers dont le dépot fictif qui est le customer 0
-    public static int V;  // nombre de véhicules
+    public static int V; // nombre de véhicules
     public static int V_etoile; // camion fictif qui n'existe nulle part       
-    public static int K;  // nombre de périodes
+    public static int K; // nombre de périodes
     public static int nb_total_visite;
     public static int H; // borne sup. de la distance
     public static int H_stock; // borne sup. du stock
@@ -63,7 +61,7 @@ public class IRP_chap3_V2_IRP_chap3 {
     public static IntVar[] y_linear;
     public static IntVar[] Stock_linear;
     public static IntVar[] p_linear;
-    public static IntVar[] g_linear;             // quantité livrée
+    public static IntVar[] g_linear; // quantité livrée
     public static IntVar[] PStock;
     public static IntVar[][] s;
 
@@ -305,7 +303,7 @@ public class IRP_chap3_V2_IRP_chap3 {
         //   IntVar[][] s;             // le successeur de chaque visite et par période
         s = new IntVar[nb_total_visite][K];
 
-        IntVar[][] s_t;             // le successeur de chaque visite et par période
+        IntVar[][] s_t; // le successeur de chaque visite et par période
         s_t = new IntVar[K][nb_total_visite];
 
         // contrainte 2.1 et 2.2
@@ -318,7 +316,7 @@ public class IRP_chap3_V2_IRP_chap3 {
             for (int i = 1; i < nb_total_visite; i++) {
                 if (i < N + V) {
                     s[i][k] = mon_modele.intVar("s_" + i + "_" + k, 1, nb_total_visite);
-                    s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 1, nb_total_visite);     // le noeud 0 ne compte pas
+                    s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 1, nb_total_visite); // le noeud 0 ne compte pas
                 } else {
                     s[i][k] = mon_modele.intVar("s_" + i + "_" + k, 0);
                     s_t[k][i] = mon_modele.intVar("s_t_" + k + "_" + i, 0);
@@ -439,13 +437,11 @@ public class IRP_chap3_V2_IRP_chap3 {
                 // contrainte 9.2 et 9.3.
                 mon_modele.ifThenElse(bb[i][k],
                         mon_modele.arithm(s[i][k], "!=", i),
-                        mon_modele.arithm(s[i][k], "=", i)
-                );
+                        mon_modele.arithm(s[i][k], "=", i));
 
                 mon_modele.ifThenElse(bb[i][k],
                         mon_modele.arithm(s[i][k], "!=", i),
-                        mon_modele.arithm(a[i][k], "=", 0)
-                );
+                        mon_modele.arithm(a[i][k], "=", 0));
             }
         }
 
@@ -490,8 +486,7 @@ public class IRP_chap3_V2_IRP_chap3 {
                 for (int k = 0; k < K; k++) {
 
                     mon_modele.reification(w[i][j][k],
-                            mon_modele.arithm(a[i][k], "=", j)
-                    );
+                            mon_modele.arithm(a[i][k], "=", j));
                 }
             }
         }
@@ -899,11 +894,10 @@ public class IRP_chap3_V2_IRP_chap3 {
                     Search.intVarSearch(
                             new FirstFail(mon_modele), // selecteur de variable
                             new IntDomainLast(solution_init, new IntDomainMin()), // choix de la valeur
-                            p_linear)
-            );
+                            p_linear));
 
         } else {
-// search strategy
+            // search strategy
             // 1/ g compatible with D & indomainMin  ==>  Z1=|gik-Dik] with Z2=2Z1  Z=Z2+greaterBoolean
             //    Start with Z=0 ie gik=Dik then Z1=1 with gik=Dik-1 and gik=Dik+1; Z=2 gik=Dik+-2 etc
             IntVar[] Z1 = mon_modele.intVarArray("Z1", (nb_total_visite - 1) * K, 0, 10000);
@@ -915,7 +909,7 @@ public class IRP_chap3_V2_IRP_chap3 {
                 for (int k = 0; k < K; k++) {
                     mon_modele.arithm(Z1PlusMoins[i * K + k], "+", g_linear[i * K + k], "=", D[i][k]);
                     mon_modele.absolute(Z1[i * K + k], Z1PlusMoins[i * K + k]).post();
-                    mon_modele.scalar(new IntVar[]{Z1[i * K + k], Z2[i * K + k]}, new int[]{2, -1}, "=", 0).post();
+                    mon_modele.scalar(new IntVar[] { Z1[i * K + k], Z2[i * K + k] }, new int[] { 2, -1 }, "=", 0).post();
                     mon_modele.reifyXgtC(g_linear[i * K + k], D[i][k], GGreaterD[i * K + k]);
                     mon_modele.arithm(Z2[i * K + k], "+", GGreaterD[i * K + k], "=", Z[i * K + k]).post();
                 }
@@ -925,29 +919,23 @@ public class IRP_chap3_V2_IRP_chap3 {
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            g_linear
-                    ),
+                            g_linear),
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            y_linear
-                    ),
+                            y_linear),
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            Stock_linear
-                    ),
+                            Stock_linear),
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            PStock
-                    ),
+                            PStock),
                     Search.intVarSearch(
                             new MaxRegret(), // selecteur de variable
                             new IntDomainMin(), // choix de la valeur
-                            p_linear
-                    )
-            );
+                            p_linear));
         }
 
         while (mon_solveur.solve()) {
@@ -979,24 +967,24 @@ public class IRP_chap3_V2_IRP_chap3 {
                 }
             }
 
-//            for (int i = 1; i < N; i++) {
-//                System.out.println("Client " + i + " : ");
-//                System.out.print(Stock_Initial_client[i] + " |  ");
-//                for (int u = 1; u < K; u++) {
-//                    int vv = Stock[i][u].getLB();
-//                    int ss = solution.getIntVal(Stock[i][u]);
-//                    System.out.print(ss + " |  ");
-//                }
-//                System.out.println();
-//                System.out.println("Client " + i + " : ");
-//                for (int u = 0; u < K; u++) {
-//                    int ss = solution.getIntVal(g[i][u]);
-//                    System.out.print(ss + " |  ");
-//                }
-//                System.out.println();
-//                System.out.println();
-//                System.out.println();
-//            }
+            //            for (int i = 1; i < N; i++) {
+            //                System.out.println("Client " + i + " : ");
+            //                System.out.print(Stock_Initial_client[i] + " |  ");
+            //                for (int u = 1; u < K; u++) {
+            //                    int vv = Stock[i][u].getLB();
+            //                    int ss = solution.getIntVal(Stock[i][u]);
+            //                    System.out.print(ss + " |  ");
+            //                }
+            //                System.out.println();
+            //                System.out.println("Client " + i + " : ");
+            //                for (int u = 0; u < K; u++) {
+            //                    int ss = solution.getIntVal(g[i][u]);
+            //                    System.out.print(ss + " |  ");
+            //                }
+            //                System.out.println();
+            //                System.out.println();
+            //                System.out.println();
+            //            }
             double[] Cs = solution.getRealBounds(cout_stockage);
             int cout_sol = solution.getIntVal(d_total);
             mon_obj = solution.getRealBounds(mon_objectif);
@@ -1100,12 +1088,12 @@ public class IRP_chap3_V2_IRP_chap3 {
                 System.out.println();
 
                 /* System.gc();
-            Runtime.getRuntime().gc();
-            try{
-            Thread.sleep(3000);            
-            }catch(InterruptedException e){
-            System.out.println(e.getMessage()); 
-            }    */
+                Runtime.getRuntime().gc();
+                try{
+                Thread.sleep(3000);            
+                }catch(InterruptedException e){
+                System.out.println(e.getMessage()); 
+                }    */
                 K = periode;
                 resoudre(4, 1, periode * 10);
 

@@ -1,20 +1,25 @@
 package chap4_jobshop;
 
-import java.io.*;
-import java.text.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.PrintWriter;
+import java.io.StreamTokenizer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Random;
 
-import org.chocosolver.solver.*;
-import org.chocosolver.solver.search.strategy.*;
-import static org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory.makeIntSplit;
-import org.chocosolver.solver.search.strategy.selectors.values.*;
-import org.chocosolver.solver.search.strategy.selectors.variables.AntiFirstFail;
-import org.chocosolver.solver.search.strategy.selectors.variables.DomOverWDeg;
+import org.chocosolver.solver.Model;
+import org.chocosolver.solver.Solution;
+import org.chocosolver.solver.Solver;
+import org.chocosolver.solver.search.strategy.Search;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainLast;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainRandom;
 import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
-import org.chocosolver.solver.search.strategy.selectors.variables.InputOrder;
-import org.chocosolver.solver.search.strategy.selectors.variables.MaxRegret;
-import org.chocosolver.solver.variables.*;
-
+import org.chocosolver.solver.variables.BoolVar;
+import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.util.ESat;
 
 /**
@@ -24,22 +29,22 @@ import org.chocosolver.util.ESat;
 public class JobShop_Bierwirth_Matth {
 
     public static String nom_instance;
-    public static String chemin_instance;       // = "./instance//" + nom_instance + ".txt";
+    public static String chemin_instance; // = "./instance//" + nom_instance + ".txt";
     public static int ecart_maximal = 4;
     public static int timelimit = 5;
     public static int nb_max_iter = 60;
     public static int duree_maximale = 300;
 
-    public static int nb_job = -1;              // jobs
-    public static int nb_machine = -1;		// machines
-    public static int nt = -1;                  // nt (=nb_job*nb_machine+1)
+    public static int nb_job = -1; // jobs
+    public static int nb_machine = -1; // machines
+    public static int nt = -1; // nt (=nb_job*nb_machine+1)
 
-    public static int Dmax = 3000;            	// taille de l’horizon
-    public static int[][] Machine = null;       // la machine de l'opération i,j
+    public static int Dmax = 3000; // taille de l’horizon
+    public static int[][] Machine = null; // la machine de l'opération i,j
     public static int[][] Gamme = null;
-    public static int[][] Pt = null;            //Pt des operations
-    public static int[] Pt_lineaire = null;     //Pt linéaire des opérations, (la 1° opération est la numéro 1, correspondant à Gamme[0][0])
-    public static int[][] Tab = null;           //Tab[i][j]= position de l'opération dans le vecteur st
+    public static int[][] Pt = null; //Pt des operations
+    public static int[] Pt_lineaire = null; //Pt linéaire des opérations, (la 1° opération est la numéro 1, correspondant à Gamme[0][0])
+    public static int[][] Tab = null; //Tab[i][j]= position de l'opération dans le vecteur st
     public static int[][] op_par_machine = null;// opérations utilisant la machine i
 
     public static Random generator;
@@ -47,14 +52,14 @@ public class JobShop_Bierwirth_Matth {
 
     // variables :
     public static Model mon_modele;
-    public static IntVar[] lambda;          //vecteur de Bierwirth
-    public static IntVar[] rang;            //le rang de chaque opération dans le vecteur de Bierwith
-    public static IntVar[] st;              //le st des opérations
-    public static IntVar[] ft;              //le ft des opérations
-    public static IntVar[] pred_ma;         //predecesseur machine d'une opération
-    public static int[] lambda_depart;      // vecteur de bierwirth de départ
-    public static Solution solution_init;   // solution de départ
-    public static IntVar Cmax;              // valeur de la fonction objectf
+    public static IntVar[] lambda; //vecteur de Bierwirth
+    public static IntVar[] rang; //le rang de chaque opération dans le vecteur de Bierwith
+    public static IntVar[] st; //le st des opérations
+    public static IntVar[] ft; //le ft des opérations
+    public static IntVar[] pred_ma; //predecesseur machine d'une opération
+    public static int[] lambda_depart; // vecteur de bierwirth de départ
+    public static Solution solution_init; // solution de départ
+    public static IntVar Cmax; // valeur de la fonction objectf
     public static Solver mon_solveur;
     public static int best_sol;
     public static long best_temps;
@@ -72,7 +77,7 @@ public class JobShop_Bierwirth_Matth {
         int p = Math.abs(generator.nextInt());
         int pp = p % 4 + 1;
         for (int i = 1; i <= pp; i++) {
-//        for (int i = 1; i < t.length/2; i++) {
+            //        for (int i = 1; i < t.length/2; i++) {
             double x = generator.nextFloat();
             double y = x * t.length;
             int z = (int) (1 + y);
@@ -173,7 +178,8 @@ public class JobShop_Bierwirth_Matth {
         } catch (Exception e) {
             System.out.println("Erreur lecture fichier");
             System.out.println(e.getMessage());
-        };
+        }
+        ;
         // fin lecture
     }
 
@@ -240,7 +246,8 @@ public class JobShop_Bierwirth_Matth {
         } catch (Exception e) {
             System.out.println("Erreur lecture fichier");
             System.out.println(e.getMessage());
-        };
+        }
+        ;
         // fin lecture
     }
 
@@ -269,38 +276,38 @@ public class JobShop_Bierwirth_Matth {
     // --                                                               --//
     // *******************************************************************//
     static void contraintes() {
-        lambda = new IntVar[nt];   //vecteur de Bierwirth
-        rang = new IntVar[nt];     //le rang de chaque opération dans le vecteur de Bierwith
-        st = new IntVar[nt];      //le st des opérations
-        ft = new IntVar[nt];      //le ft des opérations
+        lambda = new IntVar[nt]; //vecteur de Bierwirth
+        rang = new IntVar[nt]; //le rang de chaque opération dans le vecteur de Bierwith
+        st = new IntVar[nt]; //le st des opérations
+        ft = new IntVar[nt]; //le ft des opérations
         pred_ma = new IntVar[nt]; //predecesseur machine d'une opération
-        
+
         // contraintes 1 et 2
         // déclaration des st 
         st[0] = mon_modele.intVar("st_0", 0);
         for (int i = 1; i < nt; i++) {
-                st[i] = mon_modele.intVar("st_" + i, 0, Dmax, false);
+            st[i] = mon_modele.intVar("st_" + i, 0, Dmax, false);
         }
 
         // contraintes 3 et 4
         // déclaration des ft
         ft[0] = mon_modele.intVar("ft_0", 0);
         for (int i = 1; i < nt; i++) {
-                ft[i] = mon_modele.intVar("ft_" + i, 0, Dmax, false);
+            ft[i] = mon_modele.intVar("ft_" + i, 0, Dmax, false);
         }
-                
+
         // contrainte 5 : st[i]+Pt[i]=ft[i]
         for (int i = 1; i < nt; i++) {
             mon_modele.arithm(ft[i], "=", st[i], "+", Pt_lineaire[i]).post();
         }
-        
+
         // contrainte 15 déclaration des lambda 
         lambda[0] = mon_modele.intVar("L_0", 0);
         // contrainte 16
         for (int i = 1; i < nt; i++) {
             lambda[i] = mon_modele.intVar("L_" + i, 1, nb_job, false);
         }
-        
+
         // contrainte 9 : les prédécesseurs machines possible 
         pred_ma[0] = mon_modele.intVar("pred_ma_0", 0);
         for (int i = 0; i < nb_job; i++) {
@@ -319,8 +326,7 @@ public class JobShop_Bierwirth_Matth {
                 pred_ma[op] = mon_modele.intVar("pred_ma_" + op, pred_possible);
             }
         }
-        
-        
+
         // contrainte 6 : st[i]=max(ft[pred_ma[i]],ft[operation-1 dans gamme])
         for (int i = 0; i < nb_job; i++) {
             for (int j = 0; j < nb_machine; j++) {
@@ -329,10 +335,9 @@ public class JobShop_Bierwirth_Matth {
                 mon_modele.element(ftm, ft, pred_ma[k], 0).post();
 
                 IntVar ftj;
-                if (j != 0){ // pas la première operation de la gamme
+                if (j != 0) { // pas la première operation de la gamme
                     ftj = ft[k - 1];
-                }
-                else {
+                } else {
                     ftj = mon_modele.intVar("ftj" + k, 0);
                 }
                 IntVar ft_max = mon_modele.intVar("ft_max_" + k, 0, Dmax);
@@ -340,18 +345,17 @@ public class JobShop_Bierwirth_Matth {
                 mon_modele.arithm(st[k], "=", ft_max).post();
             }
         }
-        
+
         // contraintes 7 et 8
         // déclaration des rangs 
         rang[0] = mon_modele.intVar("R_0", 0);
         for (int i = 1; i < nt; i++) {
             rang[i] = mon_modele.intVar("R_" + i, 1, nt + 1, true);
         }
-        
-                      
+
         // contrainte 10
         mon_modele.allDifferent(rang).post();
-        
+
         // contrainte 11 : pour deux opérations de la même gamme, le rang de la 1° op doit être plus petit
         for (int i = 0; i < nb_job; i++) {
             for (int j = 1; j < nb_machine; j++) {
@@ -360,14 +364,14 @@ public class JobShop_Bierwirth_Matth {
                 mon_modele.arithm(rang[k_moins_1], "<", rang[k]).post();
             }
         }
-        
-         // contrainte 12 : le rang de l'opération prec en dijonction machine doit être plus petit
+
+        // contrainte 12 : le rang de l'opération prec en dijonction machine doit être plus petit
         for (int i = 1; i < nt; i++) {
             IntVar rang_op_prec_disj = mon_modele.intVar("rang_op_prec_disj_" + i, 0, nt, true);
             mon_modele.element(rang_op_prec_disj, rang, pred_ma[i], 0).post();
             mon_modele.arithm(rang_op_prec_disj, "<", rang[i]).post();
         }
-        
+
         // contrainte 13 : lambda[rang[i]]=Job[i];
         for (int i = 0; i < nb_job; i++) {
             for (int j = 0; j < nb_machine; j++) {
@@ -376,7 +380,7 @@ public class JobShop_Bierwirth_Matth {
                 mon_modele.element(job_vecteur, lambda, rang[op], 0).post();
             }
         }
-        
+
         // contrainte 14 : les prédécesseurs machines doivent être differents pour chaque machine
         for (int i = 0; i < nb_machine; i++) {
             IntVar[] pred_ma_local = mon_modele.intVarArray("pred_ma_local_" + i, nb_job, 0, nt, false);
@@ -387,7 +391,6 @@ public class JobShop_Bierwirth_Matth {
             mon_modele.allDifferent(pred_ma_local).post();
         }
 
-        
         // contrainte 17 : dans le vecteur lambda, un job ne doit être présent qu'un nombre limité de fois
         IntVar limite = mon_modele.intVar("limite", nb_machine);
         for (int i = 1; i < nb_job; i++) {
@@ -395,10 +398,9 @@ public class JobShop_Bierwirth_Matth {
             mon_modele.count(val_job, lambda, limite).post();
         }
 
-        
         // Objectif : contrainte 18
         Cmax = mon_modele.intVar("Cmax", 0, Dmax);
-        
+
         //contrainte 19
         for (int i = 1; i < nt; i++) {
             mon_modele.arithm(Cmax, ">=", ft[i]).post();
@@ -406,9 +408,8 @@ public class JobShop_Bierwirth_Matth {
 
         // contrainte 20
         mon_modele.arithm(Cmax, ">=", borne_inf).post();
-               
-        
-         // contrainte 21 : contrainte DiffN
+
+        // contrainte 21 : contrainte DiffN
         IntVar[] ones = mon_modele.intVarArray("ones", nt, 1, 1);
         IntVar[] y = new IntVar[nt];
         IntVar[] d = new IntVar[nt];
@@ -423,13 +424,9 @@ public class JobShop_Bierwirth_Matth {
             }
         }
         mon_modele.diffN(st, y, d, ones, true).post();
-        
-        
-        
+
         // calcul ecart entre vecteur :
-        
-        
-        
+
         // contrainte 22
         IntVar Dist = mon_modele.intVar("Distance_gamma", 0, nt);
         // contrainte 23
@@ -437,12 +434,11 @@ public class JobShop_Bierwirth_Matth {
         for (int u = 0; u < nt; u++) {
             // contrainte 24
             mon_modele.reifyXneC(lambda[u], lambda_depart[u], dist_L[u]);
-        }          
+        }
         // contrainte 25
         mon_modele.sum(dist_L, "=", Dist).post();
         // contrainte 26
         mon_modele.arithm(Dist, "<=", ecart_maximal).post();
-        
 
     }
 
@@ -501,15 +497,12 @@ public class JobShop_Bierwirth_Matth {
     }
 
     public static void fct_objectif() {
-        
-        
 
         mon_modele.setObjective(Model.MINIMIZE, Cmax);
     }
 
-    public static void multi_start()
-    {
-         String nom_sortie = "./resultat//resume.csv";
+    public static void multi_start() {
+        String nom_sortie = "./resultat//resume.csv";
         intialiser_fichier_resultat(nom_sortie);
 
         for (int inst = 2; inst <= 2; inst++) {
@@ -526,7 +519,7 @@ public class JobShop_Bierwirth_Matth {
 
             avg_sol = 0;
 
-           // nb_max_iter=1;
+            // nb_max_iter=1;
             for (int iter = 1; iter <= nb_max_iter; iter++) {
                 System.out.println("iter=  " + iter);
                 System.out.println("");
@@ -547,10 +540,10 @@ public class JobShop_Bierwirth_Matth {
 
                 mon_modele = new Model(nom_instance);
 
-                contraintes();          // déclaration des contraintes
-                solution_depart();      // solution depart
-                fct_objectif();         // fonction objectif
-                parametrage_solveur();  //parametrage du solveur            
+                contraintes(); // déclaration des contraintes
+                solution_depart(); // solution depart
+                fct_objectif(); // fonction objectif
+                parametrage_solveur(); //parametrage du solveur            
 
             } // fin iter
 
@@ -562,23 +555,17 @@ public class JobShop_Bierwirth_Matth {
             System.out.println("       Makespan Moyen    : " + avg_sol);
             System.out.println("\n\n ********************************* \n");
         }
-    
+
     }
-    
-    
-    
-    
-    public static void grasp_els()
-    {
-         String nom_sortie = "./resultat//resume.csv";
+
+    public static void grasp_els() {
+        String nom_sortie = "./resultat//resume.csv";
         intialiser_fichier_resultat2(nom_sortie);
-        
 
         generator = new Random();
 
-        for (int inst = 1; inst <= 10; inst++) 
-        {
-          
+        for (int inst = 1; inst <= 10; inst++) {
+
             if (inst < 10) {
                 nom_instance = "la0" + Integer.toString(inst);
             } else {
@@ -595,35 +582,35 @@ public class JobShop_Bierwirth_Matth {
             System.out.println(chemin_instance);
             System.out.println(" ********************** ");
             System.out.println();
-            
-           // nb_max_iter=1;
-           long debut = new java.util.Date().getTime();
-           
+
+            // nb_max_iter=1;
+            long debut = new java.util.Date().getTime();
+
             for (int iter = 1; iter <= 1; iter++) {
                 System.out.println("iter=  " + iter);
                 System.out.println("");
 
                 debut = new java.util.Date().getTime();
-                
-                generator.setSeed(123456789+iter);
+
+                generator.setSeed(123456789 + iter);
 
                 lire_instance();
                 creation_lambda(); // aléatoire 
 
-                    int[] sauve_lambda;
-                    sauve_lambda= new int[nt];                
+                int[] sauve_lambda;
+                sauve_lambda = new int[nt];
 
-                    int[] Best_lambda;
-                    Best_lambda= new int[nt];    
-                    double best_cout = 9999;                    
-                    
-                    int stop=0;
-                    int nb_els = 0;
-                    
-                    do{
+                int[] Best_lambda;
+                Best_lambda = new int[nt];
+                double best_cout = 9999;
 
-                    nb_els = nb_els +1 ;
-                    
+                int stop = 0;
+                int nb_els = 0;
+
+                do {
+
+                    nb_els = nb_els + 1;
+
                     int iteration = iter - 1;
 
                     System.out.print("Lambda depart = ");
@@ -634,229 +621,200 @@ public class JobShop_Bierwirth_Matth {
 
                     mon_modele = new Model(nom_instance);
 
-                    contraintes();          // déclaration des contraintes
-                    solution_depart();      // solution depart
-                    fct_objectif();         // fonction objectif
+                    contraintes(); // déclaration des contraintes
+                    solution_depart(); // solution depart
+                    fct_objectif(); // fonction objectif
 
                     // evaluation            
                     mon_solveur = mon_modele.getSolver();
 
                     String tps_limite = timelimit + "s";
                     mon_solveur.limitTime(tps_limite);
-                    
+
                     // mon_solveur.showShortStatistics();
-                   
-                    
+
                     mon_solveur.setSearch(
 
-                    Search.intVarSearch(
-                        new FirstFail(mon_modele), // selecteur de variable
-                        new IntDomainLast(solution_init, new IntDomainRandom(314)), // choix de la valeur
-                       lambda),
-                    Search.intVarSearch(
-                        new FirstFail(mon_modele), // selecteur de variable
-                        new IntDomainMin(),
-                       Cmax)
-                      );
+                            Search.intVarSearch(
+                                    new FirstFail(mon_modele), // selecteur de variable
+                                    new IntDomainLast(solution_init, new IntDomainRandom(314)), // choix de la valeur
+                                    lambda),
+                            Search.intVarSearch(
+                                    new FirstFail(mon_modele), // selecteur de variable
+                                    new IntDomainMin(),
+                                    Cmax));
 
                     mon_solveur.setLDS(500 * ecart_maximal);
                     Solution s = new Solution(mon_modele);
-                    
+
                     while (mon_solveur.solve()) {
-                          s.record();
-                      }
+                        s.record();
+                    }
                     affichage(mon_solveur, s, Cmax);
                     double val_dep = s.getIntVal(Cmax);
 
                     // on modifie lambda
-                    for (int k=0; k<nt;k++)
-                    {
-                      int val = s.getIntVal(lambda[k]);
-                      lambda_depart[k] = val;
+                    for (int k = 0; k < nt; k++) {
+                        int val = s.getIntVal(lambda[k]);
+                        lambda_depart[k] = val;
                     }
                     System.out.print("Lambda final : ");
-                    for (int k=0; k<nt;k++)
-                    {
-                      System.out.print(lambda_depart[k]+" - ");
-                    }                
+                    for (int k = 0; k < nt; k++) {
+                        System.out.print(lambda_depart[k] + " - ");
+                    }
                     System.out.println();
 
                     // meilleure solution connue battue
-                    if (val_dep<best_cout)
-                    {
-                      best_cout = val_dep;
-                      for (int k=0; k<nt;k++)
-                      {
-                        Best_lambda[k] = lambda_depart[k];
-                       }                      
+                    if (val_dep < best_cout) {
+                        best_cout = val_dep;
+                        for (int k = 0; k < nt; k++) {
+                            Best_lambda[k] = lambda_depart[k];
+                        }
                     }
-                    
+
                     // generation des voisins
-                    
+
                     int[] best_lambda_voisin;
-                    best_lambda_voisin= new int[nt];
-                    double best_voisin_cout=9999999;
+                    best_lambda_voisin = new int[nt];
+                    double best_voisin_cout = 9999999;
 
-                    System.out.println(best_cout+" / "+val_dep);
-                    
+                    System.out.println(best_cout + " / " + val_dep);
+
                     // 10 voisins
-                    for (int j=1; j<=10; j++)
-                    {
-                      System.out.println("******** "+j+" ******");
+                    for (int j = 1; j <= 10; j++) {
+                        System.out.println("******** " + j + " ******");
 
-                     for (int o=1; o<=1; o++)
-                     {
-                      // on genere un voisin
-                      int p1 = Math.abs(generator.nextInt());
-                      p1 = p1 % (nt-1) + 1;
-                      int p2 = -1;
-                      do{
-                        p2 = Math.abs(generator.nextInt());
-                        p2 = p2 % (nt-1) + 1;
-                      }while (lambda_depart[p1]==lambda_depart[p2]);
+                        for (int o = 1; o <= 1; o++) {
+                            // on genere un voisin
+                            int p1 = Math.abs(generator.nextInt());
+                            p1 = p1 % (nt - 1) + 1;
+                            int p2 = -1;
+                            do {
+                                p2 = Math.abs(generator.nextInt());
+                                p2 = p2 % (nt - 1) + 1;
+                            } while (lambda_depart[p1] == lambda_depart[p2]);
 
-                      // sauver_lambda_depart
-                      for (int k=0; k<nt;k++)
-                      {
-                        sauve_lambda[k] = lambda_depart[k] ;
-                      }                   
+                            // sauver_lambda_depart
+                            for (int k = 0; k < nt; k++) {
+                                sauve_lambda[k] = lambda_depart[k];
+                            }
 
+                            // permuter
+                            int valeur = lambda_depart[p1];
+                            lambda_depart[p1] = lambda_depart[p2];
+                            lambda_depart[p2] = valeur;
+                        }
 
-                      // permuter
-                      int valeur = lambda_depart[p1];
-                      lambda_depart[p1] = lambda_depart[p2];
-                      lambda_depart[p2]=valeur;
-                     }  
-                      
+                        mon_solveur.restart();
+                        mon_solveur.reset();
 
-                      mon_solveur.restart();
-                      mon_solveur.reset();
+                        mon_modele = new Model(nom_instance);
 
-                      mon_modele = new Model(nom_instance);
-
-                      contraintes();          // déclaration des contraintes
-                      solution_depart();      // solution depart
-                      fct_objectif();         // fonction objectif
+                        contraintes(); // déclaration des contraintes
+                        solution_depart(); // solution depart
+                        fct_objectif(); // fonction objectif
 
                         // evaluation            
-                      mon_solveur = mon_modele.getSolver();
+                        mon_solveur = mon_modele.getSolver();
 
-                      mon_solveur.limitTime(tps_limite);
-                  //    mon_solveur.showShortStatistics();
-                      mon_solveur.setSearch(
+                        mon_solveur.limitTime(tps_limite);
+                        //    mon_solveur.showShortStatistics();
+                        mon_solveur.setSearch(
 
-                      Search.intVarSearch(
-                            new FirstFail(mon_modele), // selecteur de variable
-                            new IntDomainLast(solution_init, new IntDomainRandom(314)), // choix de la valeur
-                           lambda),
-                      Search.intVarSearch(
-                            new FirstFail(mon_modele), // selecteur de variable
-                            new IntDomainMin(),
-                           Cmax)
-                          );
+                                Search.intVarSearch(
+                                        new FirstFail(mon_modele), // selecteur de variable
+                                        new IntDomainLast(solution_init, new IntDomainRandom(314)), // choix de la valeur
+                                        lambda),
+                                Search.intVarSearch(
+                                        new FirstFail(mon_modele), // selecteur de variable
+                                        new IntDomainMin(),
+                                        Cmax));
 
-                      
-                      //mon_solveur.showShortStatistics();
-                      s = new Solution(mon_modele);
-                      mon_solveur.setLDS(500 * ecart_maximal);
-                      while (mon_solveur.solve()) {
-                              s.record();
-                      }
+                        //mon_solveur.showShortStatistics();
+                        s = new Solution(mon_modele);
+                        mon_solveur.setLDS(500 * ecart_maximal);
+                        while (mon_solveur.solve()) {
+                            s.record();
+                        }
 
-                      int val1 =(int) mon_solveur.getBestSolutionValue(); 
+                        int val1 = (int) mon_solveur.getBestSolutionValue();
 
-                      if (val1<best_voisin_cout) 
-                      {
+                        if (val1 < best_voisin_cout) {
                             best_voisin_cout = val1;
-                            for (int k=0; k<nt;k++)
-                            {
-                              int val = s.getIntVal(lambda[k]);
-                              best_lambda_voisin[k] = val;
-                            }        
-                            
-                            if (best_voisin_cout<best_cout)
-                            {
-                              best_cout = best_voisin_cout;
-                              for (int k=0; k<nt;k++)
-                              {
-                                Best_lambda[k] = best_lambda_voisin[k];
-                               }                      
-                              if (best_cout==borne_inf) j=11;
+                            for (int k = 0; k < nt; k++) {
+                                int val = s.getIntVal(lambda[k]);
+                                best_lambda_voisin[k] = val;
                             }
-                            
-                            
-                            
-                            
-                      } // meilleure voiris
 
-                    long fin2 = new java.util.Date().getTime();
-                    long duree2 = fin2-debut;
-                    double duree_double2 = (double)duree2/(double)1000;                      
-                      
-                      System.out.println(duree_double2+" : " +best_cout+" / "+val_dep+" / "+best_voisin_cout);
-                      
-                      // on revient au lambda de depart
-                      for (int k=0; k<nt;k++)
-                      {
-                        lambda_depart[k] = sauve_lambda[k] ;
-                      } 
+                            if (best_voisin_cout < best_cout) {
+                                best_cout = best_voisin_cout;
+                                for (int k = 0; k < nt; k++) {
+                                    Best_lambda[k] = best_lambda_voisin[k];
+                                }
+                                if (best_cout == borne_inf)
+                                    j = 11;
+                            }
 
+                        } // meilleure voiris
 
+                        long fin2 = new java.util.Date().getTime();
+                        long duree2 = fin2 - debut;
+                        double duree_double2 = (double) duree2 / (double) 1000;
+
+                        System.out.println(duree_double2 + " : " + best_cout + " / " + val_dep + " / " + best_voisin_cout);
+
+                        // on revient au lambda de depart
+                        for (int k = 0; k < nt; k++) {
+                            lambda_depart[k] = sauve_lambda[k];
+                        }
 
                     } // fin des voisins
-                       
-                      // on repart du meilleur des lambda
-                    for (int k=0; k<nt;k++)
-                    {
-                      lambda_depart[k] = best_lambda_voisin[k] ;
-                    }                     
-                         
-                    if (best_cout==borne_inf)
-                        stop=1;
-                    if (nb_els==100)
-                        stop=1;
-                    
-                    long fin = new java.util.Date().getTime();
-                    long duree = fin-debut;
-                    double duree_double = (double)duree/(double)1000;
-                    if (duree_double>duree_maximale)
-                    {
-                        stop=1;
-                        System.out.println("duree = "+duree);
+
+                    // on repart du meilleur des lambda
+                    for (int k = 0; k < nt; k++) {
+                        lambda_depart[k] = best_lambda_voisin[k];
                     }
-                      
-                }while(stop==0);
-                
+
+                    if (best_cout == borne_inf)
+                        stop = 1;
+                    if (nb_els == 100)
+                        stop = 1;
+
+                    long fin = new java.util.Date().getTime();
+                    long duree = fin - debut;
+                    double duree_double = (double) duree / (double) 1000;
+                    if (duree_double > duree_maximale) {
+                        stop = 1;
+                        System.out.println("duree = " + duree);
+                    }
+
+                } while (stop == 0);
+
                 long fin = new java.util.Date().getTime();
-                long duree = fin-debut;
-                double duree_double = (double)duree/(double)1000;
-                
-                
+                long duree = fin - debut;
+                double duree_double = (double) duree / (double) 1000;
+
                 fichier_resultat2(nom_sortie, inst, best_cout, duree_double);
-                
+
                 System.out.println("\n\n ********************************* \n");
                 System.out.println("       Meilleur Makespan : " + best_cout);
                 System.out.println("       Duree totale : " + duree_double);
                 System.out.print("       Lambda : ");
-                for (int k=0; k<nt;k++)
-                {
-                 System.out.print(Best_lambda[k]+" - ");
-                }                
-                System.out.println();       
+                for (int k = 0; k < nt; k++) {
+                    System.out.print(Best_lambda[k] + " - ");
+                }
+                System.out.println();
                 System.out.println("\n\n ********************************* \n");
-                           
-      } // fin iteration
-    } // instances
-} // procedure
-    
-    
-    
-    
+
+            } // fin iteration
+        } // instances
+    } // procedure
+
     public static void main(String[] args) {
 
         grasp_els();
-        
-//       multi_start();
+
+        //       multi_start();
     }
 
     private static void parametrage_solveur() {
@@ -870,13 +828,12 @@ public class JobShop_Bierwirth_Matth {
                 Search.intVarSearch(
                         new FirstFail(mon_modele), // selecteur de variable
                         new IntDomainLast(solution_init, new IntDomainRandom(314)), // choix de la valeur
-                       //new IntDomainLast(solution_init, new IntDomainMiddle(true)), // choix de la valeur
+                        //new IntDomainLast(solution_init, new IntDomainMiddle(true)), // choix de la valeur
                         lambda),
                 Search.intVarSearch(
                         new FirstFail(mon_modele), // selecteur de variable
                         new IntDomainMin(),
-                        Cmax)
-        );
+                        Cmax));
 
         mon_solveur.setLDS(50 * ecart_maximal);
 
@@ -885,13 +842,12 @@ public class JobShop_Bierwirth_Matth {
         long debut = new java.util.Date().getTime();
 
         //mon_solveur.showDashboard(2);
-        
+
         while (mon_solveur.solve()) {
             s.record();
         }
 
         affichage(mon_solveur, s, Cmax);
-        
 
         if (mon_solveur.isFeasible() == ESat.TRUE) {
             if (best_sol > s.getIntVal(Cmax)) {
@@ -933,13 +889,13 @@ public class JobShop_Bierwirth_Matth {
             ecrivain.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
-        };
+        }
+        ;
 
     }
 
-    
-    public static void fichier_resultat2(String nom, int num_instance, 
-                                         double best_sol, double duree) {
+    public static void fichier_resultat2(String nom, int num_instance,
+            double best_sol, double duree) {
         try {
             File destination;
             destination = new File(nom);
@@ -956,17 +912,16 @@ public class JobShop_Bierwirth_Matth {
             ecrivain.write(best_sol + ";");
             ecrivain.write(duree + ";");
 
-
             ecrivain.write("\n");
 
             ecrivain.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
-        };
+        }
+        ;
 
     }
-    
-    
+
     public static void intialiser_fichier_resultat(String nom) {
 
         try {
@@ -1000,14 +955,12 @@ public class JobShop_Bierwirth_Matth {
             ecrivain.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
-        };
+        }
+        ;
 
     }
 
-
-
-
-public static void intialiser_fichier_resultat2(String nom) {
+    public static void intialiser_fichier_resultat2(String nom) {
 
         try {
             File destination;
@@ -1041,7 +994,8 @@ public static void intialiser_fichier_resultat2(String nom) {
             ecrivain.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
-        };
+        }
+        ;
 
     }
 

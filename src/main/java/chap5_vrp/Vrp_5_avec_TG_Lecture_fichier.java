@@ -5,6 +5,46 @@
  */
 package chap5_vrp;
 
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Affectation_initiale;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.C;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.CapaMax;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.D;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.H;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.MySolution_S;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.MySolution_a;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.MySolution_dps;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.MySolution_p;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.N;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Pt;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Suivant_initiale;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.T;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.TW_Max;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.TW_Max_vehicule;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.TW_Min;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.TW_Min_vehicule;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.T_prime;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tab_1;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tab_2;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tab_3;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tab_4;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tab_5;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tab_6;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tab_7;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tab_8;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.Tour_Geant;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.V;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.generator;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_C1;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_C2;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_C3;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_C4;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_C5;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_C6;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_C7;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_C8;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_c_de_synchro;
+import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.nb_total_visite;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -13,9 +53,6 @@ import java.io.StreamTokenizer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import org.chocosolver.util.ESat;
-import static chap5_vrp.Vrp_5_avec_TG_Vrp_5.*;
-
 
 /**
  *
@@ -27,7 +64,7 @@ public class Vrp_5_avec_TG_Lecture_fichier {
         CapaMax = 10;
         // les paramétres
         N = 10; // nombre de customers dont le dépot fictif qui est le customer 0
-        V = 4;  // nombre de véhicules         
+        V = 4; // nombre de véhicules         
         nb_total_visite = N + V * 2;
 
         H = 100; // borne sup. de la distance
@@ -35,17 +72,17 @@ public class Vrp_5_avec_TG_Lecture_fichier {
         C = new int[V + 1];
 
         // les données
-        T = new int[][]{
-            {0, 1, 3, 5, 1, 4, 4, 3, 4, 3},
-            {1, 0, 4, 4, 3, 4, 3, 1, 2, 1},
-            {3, 4, 0, 4, 1, 1, 3, 1, 1, 1},
-            {5, 4, 4, 0, 3, 4, 9, 3, 1, 2},
-            {1, 3, 1, 3, 0, 2, 2, 1, 3, 5},
-            {4, 4, 1, 4, 2, 0, 4, 5, 1, 2},
-            {4, 3, 3, 9, 2, 4, 0, 2, 1, 1},
-            {3, 1, 1, 3, 1, 5, 2, 0, 2, 1},
-            {4, 2, 1, 1, 3, 1, 1, 2, 0, 1},
-            {3, 1, 1, 2, 4, 2, 1, 1, 1, 0}
+        T = new int[][] {
+                { 0, 1, 3, 5, 1, 4, 4, 3, 4, 3 },
+                { 1, 0, 4, 4, 3, 4, 3, 1, 2, 1 },
+                { 3, 4, 0, 4, 1, 1, 3, 1, 1, 1 },
+                { 5, 4, 4, 0, 3, 4, 9, 3, 1, 2 },
+                { 1, 3, 1, 3, 0, 2, 2, 1, 3, 5 },
+                { 4, 4, 1, 4, 2, 0, 4, 5, 1, 2 },
+                { 4, 3, 3, 9, 2, 4, 0, 2, 1, 1 },
+                { 3, 1, 1, 3, 1, 5, 2, 0, 2, 1 },
+                { 4, 2, 1, 1, 3, 1, 1, 2, 0, 1 },
+                { 3, 1, 1, 2, 4, 2, 1, 1, 1, 0 }
         };
 
         D[0] = 0;
@@ -165,10 +202,10 @@ public class Vrp_5_avec_TG_Lecture_fichier {
 
         // solution initiale //
         // ***************** //
-        MySolution_S = new int[]{0, 15, 5, 1, 16, 14, 4, 2, 3, 6, 7, 8, 9, 17, 10, 11, 12, 13};
-        MySolution_a = new int[]{0, 2, 1, 2, 3, 1, 3, 1, 2, 3, 1, 2, 3, 4, 1, 2, 3, 4};
-        MySolution_p = new int[]{0, 3, 2, 2, 3, 3, 2, 1, 1, 1, 0, 0, 0, 0, 4, 4, 4, 1};
-        MySolution_dps = new int[]{0, 115, 105, 401, 116, 414, 204, 102, 103, 106, 307, 408, 309, 17, 10, 11, 12, 13};
+        MySolution_S = new int[] { 0, 15, 5, 1, 16, 14, 4, 2, 3, 6, 7, 8, 9, 17, 10, 11, 12, 13 };
+        MySolution_a = new int[] { 0, 2, 1, 2, 3, 1, 3, 1, 2, 3, 1, 2, 3, 4, 1, 2, 3, 4 };
+        MySolution_p = new int[] { 0, 3, 2, 2, 3, 3, 2, 1, 1, 1, 0, 0, 0, 0, 4, 4, 4, 1 };
+        MySolution_dps = new int[] { 0, 115, 105, 401, 116, 414, 204, 102, 103, 106, 307, 408, 309, 17, 10, 11, 12, 13 };
 
     }
 
@@ -187,7 +224,7 @@ public class Vrp_5_avec_TG_Lecture_fichier {
             Lecteur.nextToken();
             if (Lecteur.ttype == Lecteur.TT_NUMBER) {
                 V = (int) Lecteur.nval;
-//                System.out.println("Nombre lu = "+N);
+                //                System.out.println("Nombre lu = "+N);
             } else {
                 System.out.println("pas de nombre entier a  lire");
             }
@@ -197,7 +234,7 @@ public class Vrp_5_avec_TG_Lecture_fichier {
             if (Lecteur.ttype == Lecteur.TT_NUMBER) {
                 N = (int) Lecteur.nval;
                 N++;
-//                System.out.println("Nombre lu = "+N);
+                //                System.out.println("Nombre lu = "+N);
             } else {
                 System.out.println("pas de nombre entier a  lire");
             }
@@ -206,7 +243,7 @@ public class Vrp_5_avec_TG_Lecture_fichier {
             Lecteur.nextToken();
             if (Lecteur.ttype == Lecteur.TT_NUMBER) {
                 CapaMax = (int) Lecteur.nval;
-//                System.out.println("Nombre lu = "+CapaMax);
+                //                System.out.println("Nombre lu = "+CapaMax);
             } else {
                 System.out.println("pas de nombre entier a lire");
             }
@@ -290,7 +327,7 @@ public class Vrp_5_avec_TG_Lecture_fichier {
                     Lecteur.nextToken();
                     int val = (int) Lecteur.nval;
                     T[i][j] = val;
-//                    System.out.println(i+" "+j+" val= "+val);                
+                    //                    System.out.println(i+" "+j+" val= "+val);                
                 }
             }
             for (int i = 1; i < N; i++) {
@@ -407,8 +444,8 @@ public class Vrp_5_avec_TG_Lecture_fichier {
                 Tab_7 = new int[2];
                 Tab_7[0] = noeud11;
                 Tab_7[1] = noeud22;
-            }    
-            
+            }
+
             if (val >= 7) {
                 Lecteur.nextToken();
                 int noeud11 = (int) Lecteur.nval;
@@ -419,20 +456,18 @@ public class Vrp_5_avec_TG_Lecture_fichier {
                 Tab_8 = new int[2];
                 Tab_8[0] = noeud11;
                 Tab_8[1] = noeud22;
-            }            
-            
-            
+            }
+
             Input.close();
         } catch (Exception e) {
             System.out.println(e.toString());
         }
 
         // lecture fichier numéro 2 : les tournées
-        
-        
-        Tour_Geant = new int [nb_total_visite+1];
+
+        Tour_Geant = new int[nb_total_visite + 1];
         int position = 1;
-        
+
         try {
             File source = null;
             source = new File(nom_fichier_tournee);
@@ -452,21 +487,18 @@ public class Vrp_5_avec_TG_Lecture_fichier {
             int poubelle = (int) Lecteur.nval;
 
             for (int i = 1; i <= NBT; i++) {
-            //    System.out.println("\n\n ligne numero "+ i);
-          //      System.out.print("liste : ");
-                
+                //    System.out.println("\n\n ligne numero "+ i);
+                //      System.out.print("liste : ");
+
                 Lecteur.nextToken();
                 int numero_t = (int) Lecteur.nval;
 
                 Lecteur.nextToken();
                 int numero_e = (int) Lecteur.nval;
 
-                if (numero_e==0)
-                {
-                 
-                }
-                else
-                {
+                if (numero_e == 0) {
+
+                } else {
                     int prec = -1;
                     for (int j = 1; j <= numero_e; j++) {
 
@@ -477,8 +509,7 @@ public class Vrp_5_avec_TG_Lecture_fichier {
                         Tour_Geant[position] = sommet;
                         position = position + 1;
 
-
-    //                    System.out.print("  " + j + "/"+sommet);
+                        //                    System.out.print("  " + j + "/"+sommet);
                         Affectation_initiale[sommet] = i;
                         if (prec != -1) {
                             Suivant_initiale[prec] = sommet;
@@ -504,14 +535,12 @@ public class Vrp_5_avec_TG_Lecture_fichier {
         pp = 2;
         for (int i = 1; i <= pp; i++) {
             double x = generator.nextFloat();
-            double y = x * (nb_max-1);
+            double y = x * (nb_max - 1);
             int z = (int) (1 + y);
-                    
-           
+
             double x2 = generator.nextFloat();
-            double y2 = x2 * (nb_max-1);
+            double y2 = x2 * (nb_max - 1);
             int z2 = (int) (1 + y2);
-            
 
             int tmp = t[z2];
             t[z2] = t[z];
@@ -519,10 +548,8 @@ public class Vrp_5_avec_TG_Lecture_fichier {
         }
     }
 
-    
-    static void initialiser_fichier_sortie(String nom_fichier)
-    {
-         try {
+    static void initialiser_fichier_sortie(String nom_fichier) {
+        try {
             File destination;
             destination = new File(nom_fichier);
             FileOutputStream Ouput = new FileOutputStream(destination, true);
@@ -544,47 +571,42 @@ public class Vrp_5_avec_TG_Lecture_fichier {
             ecrivain.write("\n");
             ecrivain.write("\n");
 
-
             ecrivain.write(" Instance; S; T_to_best; TT;");
             ecrivain.write("\n");
 
             ecrivain.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
-        };
-        
+        }
+        ;
+
     }
-    
-    
+
     static void ecrire_resultat_ds_fichier(String nom_fichier, int num_instance, char lettre_bredstrom,
-            int cout_objectif, float temps_to_best, float temps_total)
-    {
-         try {
+            int cout_objectif, float temps_to_best, float temps_total) {
+        try {
             File destination;
             destination = new File(nom_fichier);
             FileOutputStream Ouput = new FileOutputStream(destination, true);
             PrintWriter ecrivain;
             ecrivain = new PrintWriter(Ouput);
 
-            String num=Integer.toString(num_instance);
-                    
+            String num = Integer.toString(num_instance);
+
             ecrivain.write(num);
             ecrivain.write(lettre_bredstrom + ";");
-       
 
-            ecrivain.write(cout_objectif+ ";");
+            ecrivain.write(cout_objectif + ";");
             ecrivain.write(temps_to_best + ";");
             ecrivain.write(temps_total + ";");
-            
+
             ecrivain.write("\n");
 
             ecrivain.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
-        };
+        }
+        ;
     }
-    
-    
-    
-    
+
 }
