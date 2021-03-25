@@ -1027,7 +1027,7 @@ public class IRP_chap3_V2_IRP_chap3 {
     public static void main(String[] args) {
 
         try {
-            String fichier_entree = "./Data/abs1n5_10p.dat";
+            String fichier_entree = "./data/irp/abs1n5_10p.dat";
 
             lire_fichier(fichier_entree);
             int nb_periode = K;

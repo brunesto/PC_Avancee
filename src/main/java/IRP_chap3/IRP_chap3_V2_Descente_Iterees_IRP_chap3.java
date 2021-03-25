@@ -1105,7 +1105,7 @@ public class IRP_chap3_V2_Descente_Iterees_IRP_chap3 {
         heure_debut = new Date();
         h_debut = heure_debut.getTime();
 
-        String fichier_entree = "./Data/abs2n5.dat";
+        String fichier_entree = "./data/irp/abs2n5.dat";
 
         lire_fichier(fichier_entree);
         int nb_periode = K;

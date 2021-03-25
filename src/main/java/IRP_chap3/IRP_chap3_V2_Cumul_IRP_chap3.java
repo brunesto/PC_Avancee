@@ -1020,7 +1020,7 @@ public class IRP_chap3_V2_Cumul_IRP_chap3 {
     // ******************************************************************* //
     public static void main(String[] args) {
 
-        String fichier_entree = "./Data/abs1n5.dat";
+        String fichier_entree = "./data/irp/abs1n5.dat";
 
         lire_fichier(fichier_entree);
         int nb_periode = K;
