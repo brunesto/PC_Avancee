@@ -1,6 +1,6 @@
 # PC_Avancee
 
-All samples from the book http://fc.isima.fr/~lacomme/PPC_Avancee/ (GPL2 License), Mavenized and formatted
+All samples from the book https://perso.isima.fr/~phlacomm/PPC_Avancee/ (GPL2 License), Mavenized and formatted
 
 The classes were renamed as follow: 
 
